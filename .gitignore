@@ -2,6 +2,9 @@ src/ofx_config.cfg
 src/sites.bak
 src/sites.dat
 src/setup.log
+src/connect.key
+src/cookies.dat
+src/getdata.log
 src/__pycache__/
 src/xfr/
 src/import/
