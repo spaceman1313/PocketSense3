@@ -5,3 +5,4 @@ src/setup.log
 src/__pycache__/
 src/xfr/
 src/import/
+src/*.pyc
