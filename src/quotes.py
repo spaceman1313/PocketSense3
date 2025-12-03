@@ -153,7 +153,7 @@ class Security:
 
         if self.status:
             try:
-                ht = response.text.encode('ascii', 'ignore')
+                ht = response.text
                 pdata = json.loads(ht)
                 quote = pdata['quoteSummary']['result'][0]['price']
                 self.name = quote['shortName'] or quote['longName'] or ''
@@ -433,14 +433,14 @@ def getQuotes():
         if not os.path.exists(xfrdir):
             os.mkdir(xfrdir)
 
-        ofxFile1 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(1e5,1e6)) + ".ofx"
+        ofxFile1 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(int(1e5),int(1e6))) + ".ofx"
         writer = OfxWriter(currency, account, 0, stockList, mfList)
         writer.writeFile(ofxFile1)
 
         if userdat.forceQuotes:
            #generate a second file with non-zero shares.  Getdata and Setup use this file
            #to force quote reconciliation in Money, by sending ofxFile2, and then ofxFile1
-           ofxFile2 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(1e5,1e6)) + ".ofx"
+           ofxFile2 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(int(1e5),int(1e6))) + ".ofx"
            writer = OfxWriter(currency, account, 0.001, stockList, mfList)
            writer.writeFile(ofxFile2)
 

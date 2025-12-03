@@ -50,8 +50,10 @@
 #  - open ofx file w/ 'U' qualifier.  Forces newlines to match Windows convention (e.g., \n = <CR><LF>)
 #19Jun2023*rlc
 #   - add logging
+#03Dec2023 cgn
+#   - Update to python3
 
-import os, sys, re, glob, logging
+import re, glob, logging
 import site_cfg
 from datetime import datetime, timedelta
 from control2 import *
@@ -74,14 +76,14 @@ def scrub(filename, site):
     dtHrs = FieldVal(site, 'timeOffset')
     accType = FieldVal(site, 'CAPS')[1]
     site_skip_zt = FieldVal(site, 'skipzerotrans')
-    with open(filename,'rU') as f:
+    with open(filename,'r', newline='') as f:
         ofx = f.read()  #as-found ofx message
 
     ofx = _scrubHeader(ofx) #Remove illegal spaces in OFX header lines
 
     ofx= _scrubTime(ofx)     #fix 000000 and NULL datetime stamps
 
-    if dtHrs <> 0: ofx = _scrubShiftTime(ofx, dtHrs)   #note: always call *after* _scrubTime()
+    if dtHrs != 0: ofx = _scrubShiftTime(ofx, dtHrs)   #note: always call *after* _scrubTime()
 
     ofx= _scrubDTSTART(ofx)  #fix missing <DTEND> fields
 

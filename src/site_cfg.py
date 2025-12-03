@@ -52,8 +52,10 @@
 #   -change YahooURL for new v10 service
 # 17Jul2023*rlc
 #   -remove reference to google finance.  not supported
+#03Dec2023 cgn
+#   - Update to python3
 
-import os, glob, re, random
+import  glob, re
 from rlib1 import *
 from control2 import *
 

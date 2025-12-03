@@ -15,6 +15,8 @@
 #   - Moved utility functions to rlib1 module
 # 20Jun2023
 #   - Add logging
+# 03Dec2023 cgn
+#   - Update to python3
 #------------------------------------------------------------------------------------
 
 #---MODULES---
@@ -27,10 +29,10 @@ Debug = False
 logFileEnable = True
 logFileLimit  = 10       #logfile size limit (MB)
 
-AboutTitle    = 'PocketSense OFX Download Python Scripts'
-AboutVersion  = '2023-Jul-20'
+AboutTitle    = 'PocketSense OFX Download Python Scripts for Python 3'
+AboutVersion  = '3.0.beta'
 AboutSource   = 'http://sites.google.com/site/pocketsense'
-AboutName     = 'Robert'
+AboutName     = 'Robert & Carlos'
 
 #xfrdir = temp directory for statement downloads.  Platform independent
 xfrdir    = os.path.join(os.path.curdir,"xfr") + os.sep

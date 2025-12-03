@@ -19,9 +19,11 @@
 #   - removed OfxDate() and added dateTimeStr()
 # 19Jun2023*rlc
 #   - add logging
+#03Dec2023 cgn
+#   - Update to python3
 
-import os, glob, site_cfg, time, uuid, re, random
-import md5, urllib2
+import os, glob, site_cfg, uuid, re, random
+import hashlib, urllib.parse
 import logging, logging.handlers
 import sys, pyDes, pickle
 from datetime import datetime
@@ -91,10 +93,9 @@ def clientUID(url, username, delKey=False):
     uuid = None
 
     #get urlHost:  example: url='https://test.ofx.com/my/script'
-    prefix, path = urllib2.splittype(url)
     #path='//test.ofx.com/my/script';  Host= 'test.ofx.com' ; Selector= '/my/script'
-    urlHost, urlSelector = urllib2.splithost(path)
-    key = md5.md5(urlHost+username).digest()
+    urlHost = urllib.parse.urlparse(url).netloc
+    key = hashlib.md5(urlHost+username).digest()
 
     if glob.glob(dfile) != []:
         #lookup
@@ -122,8 +123,9 @@ def get_int(prompt):
     #get number entry
     prompt = prompt.rstrip() + ' '
     done = False
+    a=0
     while not done:
-        istr = raw_input(prompt)
+        istr = input(prompt)
         if istr == '':
             a = 0
             done = True
@@ -132,6 +134,7 @@ def get_int(prompt):
                 a=int(istr)
                 done = True
             except:
+                a = 0
                 print('Please enter a valid integer')
     return a
 
@@ -499,7 +502,7 @@ def combineOfx(ofxList):
     combOfx = OfxSGMLHeader() + combOfx2
 
     #there should never be two combined*.ofx files here, but we'll use a unique name just in case
-    cfile = xfrdir + 'combined' + str(random.randrange(1e5,1e6)) + '.ofx'
+    cfile = xfrdir + 'combined' + str(random.randrange(int(1e5),int(1e6))) + '.ofx'
     f=open(cfile,'w')
     f.write(combOfx)
     f.close()
