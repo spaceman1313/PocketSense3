@@ -27,7 +27,7 @@
 #   - Added _scrubRemoveZeroTrans().  Removes $0.00 transactions when enabled in sites.dat
 #08-Apr-2017*cgn / rlc
 #   - Revert _scrubINVsign() to previous version
-#   - Add _scrubREINVESTsign() to handle REINVEST transactions separately 
+#   - Add _scrubREINVESTsign() to handle REINVEST transactions separately
 #     Note the differnt field order vs what's used for BUY/SELL transactions in _scrubINVsign()
 #27-Aug-2017*rlc
 #   - Bug patch to fix timedelta call
@@ -65,35 +65,35 @@ stat = False    #global used between re lambda subs to track status
 def scrubPrint(line):
     if not userdat.quietScrub:
         log.info("+ %s" % line)
-    
+
 def scrub(filename, site):
     #filename = string
     #site = DICT structure containing full site info from sites.dat
- 
+
     siteURL = FieldVal(site, 'url').upper()
     dtHrs = FieldVal(site, 'timeOffset')
     accType = FieldVal(site, 'CAPS')[1]
     site_skip_zt = FieldVal(site, 'skipzerotrans')
     with open(filename,'rU') as f:
         ofx = f.read()  #as-found ofx message
-       
+
     ofx = _scrubHeader(ofx) #Remove illegal spaces in OFX header lines
-    
-    ofx= _scrubTime(ofx)     #fix 000000 and NULL datetime stamps 
+
+    ofx= _scrubTime(ofx)     #fix 000000 and NULL datetime stamps
 
     if dtHrs <> 0: ofx = _scrubShiftTime(ofx, dtHrs)   #note: always call *after* _scrubTime()
-    
+
     ofx= _scrubDTSTART(ofx)  #fix missing <DTEND> fields
-      
+
     #fix malformed investment buy/sell/reinvest signs (neg vs pos), if they exist
-    if "<INVSTMTTRNRS>" in ofx.upper(): 
-        ofx= _scrubINVsign(ofx)  
-        ofx= _scrubREINVESTsign(ofx)  
-	
+    if "<INVSTMTTRNRS>" in ofx.upper():
+        ofx= _scrubINVsign(ofx)
+        ofx= _scrubREINVESTsign(ofx)
+
     #remove $0.00 transactions
-    if (userdat.skipZeroTransactions or site_skip_zt) and not site_skip_zt==False: 
+    if (userdat.skipZeroTransactions or site_skip_zt) and not site_skip_zt==False:
         ofx = _scrubRemoveZeroTrans(ofx)
-    
+
     #perform general ofx cleanup
     ofx = _scrubGeneral(ofx)
 
@@ -102,20 +102,20 @@ def scrub(filename, site):
     for scrubFile in glob.glob('scrub_*.py'):
         scrublet = scrubFile.strip('.py')
         try:
-            s = __import__(scrublet) 
+            s = __import__(scrublet)
             ofx2 = s.scrub(ofx, siteURL, accType)
-            if validOFX(ofx2) == '': 
+            if validOFX(ofx2) == '':
                 ofx=ofx2
-            else: 
+            else:
                 scrubPrint(scrubFile + ' ERROR: Custom scrub_*.py files must return a valid OFX message.')
         except Exception as e:
             log.exception('An error occurred when processing scrub module: %s' % scrublet)
-            
+
     #write the new version to the same file
     with open(filename, 'w') as f:
         f.write(ofx)
 
-#--------------------------------    
+#--------------------------------
 def _scrubTime(ofx):
     #Replace NULL time stamps with noontime (12:00)
 
@@ -123,12 +123,12 @@ def _scrubTime(ofx):
     #p produces 2 results:  group(1) = <DT*> field, group(2)=dateval
     p = re.compile(r'(<DT.+?>)([^<\s]+)', re.IGNORECASE)
     #call date correct function (inline lamda, takes regex result = r tuple)
-    
+
     global stat
     stat = False
     ofx_final = p.sub(lambda r: _scrubTime_r1(r), ofx)
     if stat: scrubPrint("Scrubber: Null time values updated.")
-    
+
     return ofx_final
 
 def _scrubTime_r1(r):
@@ -138,61 +138,61 @@ def _scrubTime_r1(r):
     global stat
     fieldtag = r.group(1)
     DT = r.group(2).strip(' ')      #date+time
-    
+
     # Full date/time format example:  20100730000000.000[-4:EDT]
     if DT[8:] == '' or DT[8:14] == '000000':
         #null time given.  Adjust to 120000 value (noon).
         DT = DT[:8] + '120000'
         stat = True
-        
+
     return fieldtag + DT
 
-#--------------------------------    
+#--------------------------------
 def _scrubDTSTART(ofx):
     # <DTSTART> field for an account statement must have a matching <DTEND> field
     # If DTEND is missing, insert <DTEND>="now"
     # The assumption is made that only one statement exists in the OFX file (no multi-statement files!)
-    
+
     ofx_final = ofx
     now = datetime.now()
     nowstr = now.strftime("%Y%m%d%H%M00")
-    
+
     if ofx.find('<DTSTART>') >= 0 and ofx.find('<DTEND>') < 0:
         #we have a dtstart, but no dtend... fix it.
         scrubPrint("Scrubber: Fixing missing <DTEND> field")
-        
+
         #regex p captures everything from <DTSTART> up to the next <tag> or white space into group(1)
         p = re.compile(r'(<DTSTART>[^<\s]+)', re.IGNORECASE)
         if Debug: log.debug('DTSTART: findall()=%s' % p.findall(ofx_final))
         #replace group1 with (group1 + <DTEND> + datetime)
         ofx_final = p.sub(r'\1<DTEND>'+nowstr, ofx_final)
-    
+
     return ofx_final
 
 def _scrubShiftTime(ofx, h):
     #Shift DTASOF time values by (float) h hours
     #Added: 15-Feb-2011, rlc
-    
+
     #regex p captures everything from <DTASOF> up to the next <tag> or white-space.
     #p produces 2 results:  group(1) = <DTASOF> field, group(2)=dateval
     p = re.compile(r'(<DTASOF>)([^<\s]+)', re.IGNORECASE | re.DOTALL)
-    
+
     #call date correct function (inline lamda, takes regex result = r tuple)
-    if p.search(ofx): 
+    if p.search(ofx):
         scrubPrint("Scrubber: Shifting DTASOF time values " + str(h) + " hours.")
-        ofx_final = p.sub(lambda r: _scrubShiftTime_r1(r,h), ofx)    
+        ofx_final = p.sub(lambda r: _scrubShiftTime_r1(r,h), ofx)
 
     return ofx_final
 
 def _scrubShiftTime_r1(r,h):
     #Shift time value by (float) h hours for regex search result r.
     #Added: 15-Feb-2011, rlc
-    
+
     fieldtag = r.group(1)       #date field tag (e.g., <DTASOF>)
     DT = r.group(2).strip(' ')  #date+time
 
     if Debug: log.debug('fieldtag=%s | DT=%s' % (fieldtag, DT))
-    
+
     # Full date/time format example:  20100730120000.000[-4:EDT]
     #separate into date/time + timezone
     tz = ""
@@ -200,55 +200,55 @@ def _scrubShiftTime_r1(r,h):
         p = DT.index('[')
         tz = DT[p:]
         DT = DT[:p]
-    
+
     #strip the decimal fraction, if we have it
     if '.' in DT:
         d  = DT.index('.')
         DT = DT[:d]
-        
+
     if Debug: log.debug('New DT=%s | tz=%s' % (DT, tz))
-    
+
     #shift the time
     tval = datetime.strptime(DT,"%Y%m%d%H%M%S")  #convert str to datetime
-    deltaT = timedelta(hours=h)    
+    deltaT = timedelta(hours=h)
     tval += deltaT                                        #add hours
     DT = tval.strftime("%Y%m%d%H%M%S") + tz               #convert new datetime to str
-        
+
     return fieldtag + DT
 
 def _scrubINVsign(ofx):
     #Fix malformed parameters in Investment buy/sell sections, if they exist
     #Issue  first noticed with Fidelity netbenefits 401k accounts:  rlc*2013
-    
+
     #BUY transactions:
     #   UNITS must be positive
     #   TOTAL must be negative
-    
+
     #SELL transactions:
     #   UNITS must be negative
     #   TOTAL must be positive
-    
+
     global stat
     stat = False
     p = re.compile(r'(<INVBUY>|<INVSELL>)(.+?<UNITS>)(.+?)(<.+?<TOTAL>)([^<]+)', re.IGNORECASE | re.DOTALL)
     ofx_final=p.sub(lambda r: _scrubINVsign_r1(r), ofx)
     if stat:
         scrubPrint("Scrubber: Invalid investment sign (pos/neg) found.  Corrected.")
-    
+
     return ofx_final
-    
+
 def _scrubINVsign_r1(r):
-    
+
     global stat
     type=""
     if "INVBUY"  in r.group(1): type = "INVBUY"
     if "INVSELL" in r.group(1): type = "INVSELL"
     qty = r.group(3)
     total=r.group(5)
-	
+
     qty_v=float2(qty)
     total_v=float2(total)
-    
+
     if (type=="INVBUY" and qty_v<0) or (type=="INVSELL" and qty_v>0):
         stat=True
         qty=str(-1*qty_v)
@@ -256,13 +256,13 @@ def _scrubINVsign_r1(r):
     if (type=="INVBUY" and total_v>0) or (type=="INVSELL" and total_v<0):
         stat=True
         total=str(-1*total_v)
-    
+
     return r.group(1) + r.group(2) + qty + r.group(4) + total
 
 def _scrubREINVESTsign(ofx):
     #Fix malformed parameters in REINVEST transactions, if they exist
     #Issue  first noticed with Fidelity netbenefits 401k accounts:  cgn*2016
-    
+
     #REINVEST transactions:
     #   UNITS must be positive
     #   TOTAL must be negative
@@ -273,17 +273,17 @@ def _scrubREINVESTsign(ofx):
     ofx_final=p.sub(lambda r: _scrubREINVESTsign_r1(r), ofx)
     if stat:
         scrubPrint("  +Scrubber: Invalid reinvestment sign (pos/neg) found.  Corrected.")
-    
+
     return ofx_final
-    
+
 def _scrubREINVESTsign_r1(r):
     global stat
     qty = r.group(5)
     total=r.group(3)
-	
+
     qty_v=float2(qty)
     total_v=float2(total)
-    
+
     if (qty_v<0):
         stat=True
         qty=str(-1*qty_v)
@@ -291,24 +291,24 @@ def _scrubREINVESTsign_r1(r):
     if (total_v>0):
         stat=True
         total=str(-1*total_v)
-    
+
     return r.group(1) + r.group(2) + total + r.group(4) + qty
-    
-def _scrubGeneral(ofx):    
-    # General scrub routine for general updates  
-    
+
+def _scrubGeneral(ofx):
+    # General scrub routine for general updates
+
     #1. Remove tag/value pairs that Money doesn't support
     #define unsupported tags that we've had trouble with
     global stat
-    uTags = []    
+    uTags = []
     uTags.append('CORRECTACTION')
     uTags.append('CORRECTFITID')
     uTags.append('REFNUM')
     uTags.append('SIC')
-    
+
     for tag in uTags:
         # Remove open tag and value
-        p = re.compile(r'<'+tag+'>[^<]*', re.IGNORECASE) 
+        p = re.compile(r'<'+tag+'>[^<]*', re.IGNORECASE)
         if p.search(ofx):
             ofx = p.sub('',ofx)
             scrubPrint("Scrubber: <"+tag+"> tags removed.  Not supported by Money.")
@@ -317,7 +317,7 @@ def _scrubGeneral(ofx):
         if p.search(ofx):
             ofx = p.sub('',ofx)
             scrubPrint("Scrubber: </"+tag+"> closing tags removed.")
-    
+
     #2. Replace ampersands '&' that aren't part of a valid escape code (i.e., is NOT like &amp;, &#012; etc)
     #   literally:  replace '&' chars with '&amp;' when the next chars are not
     #               a '#' or valid alphanumerics followed by a ;
@@ -354,23 +354,23 @@ def _scrubRemoveZeroTrans(ofx):
     stat=False
     p = re.compile(r'(<STMTTRN>.*?<TRNAMT>)(.+?)(<.*?</STMTTRN>)', re.DOTALL | re.IGNORECASE)
 
-    ofx = p.sub(lambda r: _scrubRemoveZeroTrans_r1(r), ofx)    
+    ofx = p.sub(lambda r: _scrubRemoveZeroTrans_r1(r), ofx)
     if stat: scrubPrint('Zero amount ($0.00) transactions removed.')
     return ofx
-    
+
 def _scrubRemoveZeroTrans_r1(r):
     # return null transaction when amount=0
     global stat
     amount = float2(r.group(2))
     if amount==0: stat=True
-    return None if amount==0 else r.group(1)+r.group(2)+r.group(3) 
- 
+    return None if amount==0 else r.group(1)+r.group(2)+r.group(3)
+
 def _scrubHeader(ofx):
-    # Look for header lines that have space after the colon. 
+    # Look for header lines that have space after the colon.
     #(we look based on format, in theory the RE could find them in the wrong place)
-    p = re.compile(r'(^[^<:\n]+:)(\s)([^\n]+)', re.MULTILINE) 
+    p = re.compile(r'(^[^<:\n]+:)(\s)([^\n]+)', re.MULTILINE)
     if p.search(ofx):
-        # Remove the space 
+        # Remove the space
         result = p.subn(r'\1\3',ofx)
         ofx = result[0]
         scrubPrint("Scrubber: Removed spaces in " + str(result[1]) + " header lines.")

@@ -7,7 +7,7 @@
 #   - Added DefaultAppID and DefaultAppVer
 
 # 27Jul2013: rlc
-#   - Added locale support 
+#   - Added locale support
 # 03Sep2014: rlc
 #   - xfrdir is now platform independent
 # 06Mar2017: rlc
@@ -41,6 +41,6 @@ DefaultAppID  = 'QWIN'
 DefaultAppVer = '2700'
 
 
-    
+
 
 

@@ -10,10 +10,10 @@
 # 11-Mar-2010*rlc
 #   - Added "interactive" mode
 #   - Download all statements and quotes before beginning upload to Money
-#   - Allow stock quotes to be sent to Money before statements (option defined in sites.dat) 
+#   - Allow stock quotes to be sent to Money before statements (option defined in sites.dat)
 # 09-May-2010*rlc
 #   - Download files in the order that they will be sent to Money so that file timestamps are in the same order
-#   - Send data to Money using the os.system() call rather than os.startfile(), as this seems 
+#   - Send data to Money using the os.system() call rather than os.startfile(), as this seems
 #     to help force the order when sending files to Money (FIFO)
 #   - Added logic to catch failed connections and server timeouts
 #   - Added "About" title and version to start
@@ -36,7 +36,7 @@
 #   - Bug fix for forceQuote option when the quote feature isn't being used
 # 14May2018*rlc
 #   - If an a connection fails for a specific user/pw combo, don't try other accounts during the session
-#     Added to help prevent accounts getting locked when a user changes their password, has multiple 
+#     Added to help prevent accounts getting locked when a user changes their password, has multiple
 #     accounts at the institution, but forgot to update their account settings in Setup.
 #16Sep2019*rlc
 #   - Add support for ofx import from ./import subfolder.  any file present in ./import will be inspected,
@@ -60,7 +60,7 @@ if Debug:
 def getSite(ofx):
     # find matching site entry for ofx
     # matches on FID or BANKID value found in ofx and in sites list
-    
+
     #get fid value from ofx
     site = None
     p = re.compile(r'<FID>(.*?)[<\s]',re.IGNORECASE | re.DOTALL)
@@ -70,7 +70,7 @@ def getSite(ofx):
     r = p.search(ofx)
     bankid = r.groups()[0] if r else 'undefined'
     sites = userdat.sites
-    if fid or bankid:  
+    if fid or bankid:
         for s in sites:
             if not site: site=sites[s]   #defaults to first site found, if matching fid/bankid not found
             thisFid    = FieldVal(sites[s], 'fid')
@@ -88,8 +88,8 @@ if __name__=="__main__":
     quotesExist = False
     print('')
     log.info(AboutTitle + ", Ver: " + AboutVersion)
-    
-    if Debug: 
+
+    if Debug:
         httpsVerify = False if os.environ.get('PYTHONHTTPSVERIFY','')=='0' else True
         log.debug('httpsVerify ' + 'ON' if httpsVerify else 'OFF')
 
@@ -106,7 +106,7 @@ if __name__=="__main__":
                 if p>0: interval = p
             except:
                 log.info("Invalid entry. Using defaultInterval=" + str(interval))
-        
+
         #get account info
         #AcctArray = [['SiteName', 'Account#', 'AcctType', 'UserName', 'PassWord'], ...]
         pwkey, getquotes, AcctArray = get_cfg()
@@ -117,14 +117,14 @@ if __name__=="__main__":
             #if accounts are encrypted... decrypt them
             pwkey=decrypt_pw(pwkey)
             AcctArray = acctDecrypt(AcctArray, pwkey)
-    
+
         #delete old data files
         ofxfiles = xfrdir+'*.ofx'
         if glob.glob(ofxfiles) != []:
             os.system("del "+ofxfiles)
-            
+
         log.info("Default download interval= {0} days".format(interval))
-        
+
         #create process Queue in the right order
         Queue = ['Accts', 'importFiles']
         if userdat.savetickersfirst:
@@ -143,18 +143,18 @@ if __name__=="__main__":
                 for acct in AcctArray:
                     if [acct[0], acct[3]] not in badConnects:
                         status, ofxFile = ofx.getOFX(acct, interval)
-                        if not status and userdat.skipFailedLogon: 
+                        if not status and userdat.skipFailedLogon:
                             badConnects.append([acct[0], acct[3]])
                         else:
                             ofxList.append([acct[0], acct[1], ofxFile])
                         stat1 = stat1 and status
                         print("")
-                
+
             if QEntry == 'importFiles':
                 #process files from import folder [manual user downloaded files]
                 #include anything that looks like a valid ofx file regardless of extension
                 #attempts to find site entry by FID found in the ofx file
-                
+
                 log.info('Searching %s for statements to import' % importdir)
                 for f in glob.glob(importdir+'*.*'):
                     fname = os.path.basename(f)   #full base filename.extension
@@ -173,15 +173,15 @@ if __name__=="__main__":
                                 scrubber.scrub(f, site)
                             except:
                                 log.info('No site defined for %s in sites.dat: skipping scrub routines' % fname)
-                                
-                        
+
+
                         #set NEWFILEUID:PSIMPORT to flag the file as having already been imported/scrubbed
                         #don't want to accidentally scrub twice
                         with open(f, 'rU') as ifile:
                             ofx = ifile.read()
                         p = re.compile(r'NEWFILEUID:.*')
                         ofx2 = p.sub('NEWFILEUID:PSIMPORT', ofx)
-                        if ofx2: 
+                        if ofx2:
                             with open(f, 'w') as ofile:
                                 ofile.write(ofx2)
                         #preserve original file type but save w/ ofx extension
@@ -195,13 +195,13 @@ if __name__=="__main__":
                 status, quoteFile1, quoteFile2, htmFileName = quotes.getQuotes()
                 z = ['Stock/Fund Quotes','',quoteFile1]
                 stat1 = stat1 and status
-                if glob.glob(quoteFile1) != []: 
+                if glob.glob(quoteFile1) != []:
                     ofxList.append(z)
                 else: quotesExist=False
                 print("")
 
                 # display the HTML file after download if requested to always do so
-                if status and userdat.showquotehtm: os.startfile(htmFileName)                            
+                if status and userdat.showquotehtm: os.startfile(htmFileName)
 
         if len(ofxList) > 0:
             log.info('Downloads completed.')
@@ -213,11 +213,11 @@ if __name__=="__main__":
             if doit == 'I' or Debug:
                 gogo = raw_input('Upload results to Money? (Y/N/V=Verify) [Y] ').upper()
                 gogo = 'Y' if gogo=='' else gogo[:1]    #first letter
-            
+
             if gogo == 'N': log.info('Results not sent to Money.  User cancelled.')
 
             if gogo in 'YV':
-                if glob.glob(quoteFile2) != []: 
+                if glob.glob(quoteFile2) != []:
                     if Debug: log.debug("Importing ForceQuotes statement: %s" % quoteFile2)
                     runFile(quoteFile2)  #force transactions for MoneyUK
                     raw_input('ForceQuote statement loaded.  Accept in Money and press <Enter> to continue.')
@@ -231,11 +231,11 @@ if __name__=="__main__":
                         if gogo == 'V':
                             #file[0] = site, file[1] = accnt#, file[2] = ofxFile
                             upload = (raw_input('Upload ' + file[0] + ' : ' + file[1] + ' (Y/N) ').upper() == 'Y')
-                            
-                        if upload: 
+
+                        if upload:
                            log.info("Importing " + file[2])
                            runFile(file[2])
-                        
+
                         time.sleep(0.5)   #slight delay, to force load order in Money
 
             #ask to show quotes.htm if defined in sites.dat
@@ -245,16 +245,16 @@ if __name__=="__main__":
 
             if userdat.promptEnd:
                 raw_input('\n\nPress <Enter> to continue...')
-                    
+
         else:
             if len(AcctArray)>0 or (getquotes and len(userdat.stocks)>0):
                 log.warn("No files were downloaded. Verify network connection and try again later.")
             raw_input("Press <Enter> to continue...")
-        
+
         if Debug:
             raw_input("Press <Enter> to continue...")
         elif not stat1:
             log.warn( "One or more accounts (or quotes) may not have downloaded correctly.")
             raw_input("Review and press <Enter> to continue...")
-    
+
     log.info('-----------------------------------------------------------------------------------')

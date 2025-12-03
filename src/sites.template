@@ -64,7 +64,7 @@ promptEnd  : No				#prompt/pause to continue when getData is finished
 
 #Be sure to match CaSe for site info as given by ofxhome.com (especially the url)
 
-#   Go to http://www.ofxhome.com/index.php/home/directory 
+#   Go to http://www.ofxhome.com/index.php/home/directory
 #   to get data for your institutions
 
 # Available field names and descriptions
@@ -86,29 +86,29 @@ promptEnd  : No				#prompt/pause to continue when getData is finished
 #   delay           Delay (seconds) to add before requesting data for any account defined for the site.
 #   skipZeroTrans	Site-specific override for skipZeroTransactions.  Yes/No
 #   dtacctup		Site-specific value for DTACCTUP in transaction requests.
-#   clientUID       User-provided value for site.  If defined, *replaces* auto-generated clientUID.  
+#   clientUID       User-provided value for site.  If defined, *replaces* auto-generated clientUID.
 #   userAgent       Site-specific value for userAgent in transaction request headers.
 #                   userAgent: none to suppress
 
-#   * Valid AcctType entries:  
+#   * Valid AcctType entries:
 #       CCSTMT = Credit card
 #       INVSTMT= Investment
 #       BASTMT = Bank (checking/savings)
-#--------------------------------------------------------------------------------   
+#--------------------------------------------------------------------------------
 
 #empty site template (copy/paste and fill in)
 #--------------------------------------------------------------------------------
 <site>
-    siteName     : 
-    acctType     : 
-    fiorg        : 
-    fid          : 
-    url          : 
-    bankid       : 
+    siteName     :
+    acctType     :
+    fiorg        :
+    fid          :
+    url          :
+    bankid       :
     brokerid     :
     ofxVer       :
-    appid        : 
-    appver       : 
+    appid        :
+    appver       :
     mininterval  :
     timeOffset   :
     delay        :
@@ -119,7 +119,7 @@ promptEnd  : No				#prompt/pause to continue when getData is finished
 </site>
 
 #SITE ENTRIES
-#--------------------------------------------------------------------------------             
+#--------------------------------------------------------------------------------
 <site>
     SiteName   : DISCOVER
     AcctType   : CCSTMT     #credit card
@@ -130,7 +130,7 @@ promptEnd  : No				#prompt/pause to continue when getData is finished
     brokerid   :
     ofxVer     : 103
     appid      :
-    appver     : 
+    appver     :
     mininterval:
     timeOffset :
 </site>
@@ -178,9 +178,9 @@ ForceQuotes: No               # Force Money to record a transaction when importi
 #QuoteCurrency: USD           # Currency for quotes.  Default = USD
 #QuoteAccount: 0123456789USD  # Custom account number for Quotes.  Default = 0123456789
                               # Account number can contain alpha-numeric (e.g., 123456789USD is valid)
-                              
+
 # * Only non-US versions of Money should use ForceQuotes.  Enabling this option forces a reconcile
-#   transaction in Money, which forces Money to record a price.  It requires accepting an additional 
+#   transaction in Money, which forces Money to record a price.  It requires accepting an additional
 #   statement during every import, regardless of the CombineOFX setting.  Also, Money must be open
 #   before running Getdata if ForceQuotes is enabled.
 
@@ -194,7 +194,7 @@ ForceQuotes: No               # Force Money to record a transaction when importi
 #           s:value : user defined symbol to send to Money (rather than Yahoo ticker symbol)
 #--------------------------------------------------------------------------------
 
-<stocks> 
+<stocks>
     #--- indexes ---
     ^GSPC                   #S&P 500
     ^IXIC                   #NASDAQ Composite
@@ -204,7 +204,7 @@ ForceQuotes: No               # Force Money to record a transaction when importi
     #--- stocks ---
     GOOG                    #Google
     YHOO                    #Yahoo!
-    
+
     #--- Currencies ---
     EURUSD=X                #Euro to US Dollar
     USDJPY=X                #USD to Japanese Yen

@@ -56,7 +56,7 @@ def separator_line(txt='', before=0, after=0):
     if after > 0: print('\n' * after)
 
 def list_accounts(showConnectKeys=False):
-    i=1   
+    i=1
     print('\n\n')
     print('{0:22}{1:24}{2:14}{3}'.format('Site','Account','Type','UserName'))
     print('-'*70)
@@ -70,20 +70,20 @@ def list_accounts(showConnectKeys=False):
             url = rlib1.FieldVal(Sites[sitename],'url')
             ofxVer = rlib1.FieldVal(Sites[sitename], 'ofxver')
             #clientuid can be defined for the site (sites.dat), or for the account (via setup)
-            clientUID = rlib1.FieldVal(Sites[sitename], 'clientuid') 
+            clientUID = rlib1.FieldVal(Sites[sitename], 'clientuid')
             if clientUID is None and rlib1.int2(ofxVer) > 102:
                 clientUID = rlib1.clientUID(url, user)
             if   type == 'INVSTMT': type = 'INVESTMENT'
             elif type == 'CCSTMT':  type = 'CREDIT CARD'
             print('{0:4}{1:18}{2:24}{3:14}{4}'.format(str(i)+'.',sitename,account,type,user))
-            if showConnectKeys and clientUID!=None: 
+            if showConnectKeys and clientUID!=None:
                 print('\t\t      ConnectKey: %s\n' % (clientUID))
         else:
             print('{0:4}{1:18}{2}'.format(str(i)+'.',sitename, '** Site not found in SITES.DAT **'))
         i=i+1
-   
+
 def config_account():
- 
+
     #configure account settings
     tmpfile='acctQuery.tmp'
     i=1
@@ -94,14 +94,14 @@ def config_account():
     print('0. Exit')
     separator_line()
     sitenum = rlib1.get_int('Enter Site #: [0] ')
-    
+
     if sitenum != 0 and sitenum <= len(Sitenames):
         sitenum = sitenum - 1   #index into array
         sitename = Sitenames[sitenum]
         log.info('Configuring account for %s' % sitename)
         username = raw_input('User name       : ')
         password = raw_input('Account password: ')
-        
+
         #query server for available (valid) accounts for user
         stat=True
         try:
@@ -116,11 +116,11 @@ def config_account():
         except Exception as inst:
             stat=False
             log.exception('An error occurred when executing query')
-        
-        if Debug: 
+
+        if Debug:
             log.debug('**Account query response')
             log.debug(response)
-       
+
         if not stat or not '<ACCTID>' in response:
             log.warn('An error occurred requesting accounts from the site.  Please check username and password.')
             ans = raw_input('Continue configuring account (Yes/No): [N] ') or 'N'
@@ -138,22 +138,22 @@ def config_account():
             print('\nAccount List')
             print('------------')
             alist = re.findall(r'<ACCTID>(.*?)<', response,         #get list of account entries
-                               flags=re.DOTALL | re.IGNORECASE)   
+                               flags=re.DOTALL | re.IGNORECASE)
             alist = [a.rstrip() for a in alist]                     #strip trailing whitespace/newlines/etc
             alist = sorted(alist)
-            
+
             i=1
             for a in alist:
                 print('%i. %s' % (i, a))
                 i+=1
-            
+
             account  = raw_input('\nAccount #       : ') or 0
-            if account==0: 
+            if account==0:
                 raw_input("No account selected.  Press <Enter> to return to the main menu")
                 return
-                
+
             if len(account) < 3: account = alist[int(account)-1]
-            
+
             acctype = ''
             #if this is a bank account, get the type (checking/savings)
             if 'BASTMT' in rlib1.FieldVal(Sites[sitename],'CAPS'):
@@ -169,9 +169,9 @@ def config_account():
                     separator_line()
                     selnum= rlib1.get_int('Enter account type: [0] ')
                     if selnum == 0: return
-                    
+
                 acctype = BankTypes[selnum-1]
-                
+
             #look for pre-existing entry.  delete if found.
             exists = False
             for acct in AcctArray:
@@ -180,21 +180,21 @@ def config_account():
                     exists = True
                     AcctArray.remove(acct)
                     break
-            
+
             if exists:
                 log.info('Replacing %s:%s' % (sitename, account))
             else:
                 log.info('Adding %s:%s' % (sitename, account))
-            
+
             acct = [sitename, account, acctype, username, password]
             AcctArray.append(acct)
-            
+
             #test the new account?
             test = raw_input('Do you want to test transaction downloads for the new account now (y/n)? ').upper()
             if test=='Y':
                 log.info('Testing account %s:%s' % (sitename, account))
                 test_acct(acct)
-            
+
 def test_acct(acct):
     status, ofxfile = ofx.getOFX(acct, 31)
     if status:
@@ -208,9 +208,9 @@ def test_acct(acct):
                 log.info('Results not sent to Money.  Cancelled by user.')
     else:
         log.warning('An online error occurred while testing the new account.')
-        
-        
-def test_quotes(): 
+
+
+def test_quotes():
         status, ofxFile1, ofxFile2, htmFile = quotes.getQuotes()
         if status:
             log.info('Download completed successfully')
@@ -220,7 +220,7 @@ def test_quotes():
 
             ask = raw_input('Send the results to Money (y/n)? ').upper()
             if ask=='Y':
-                if ofxFile2 != '': 
+                if ofxFile2 != '':
                     rlib1.runFile(ofxFile2)
                     if Debug: raw_input('\nPress <Enter> to send ForceQuotes statement.')
                     time.sleep(0.5)      #slight delay, to force load order in Money
@@ -229,20 +229,20 @@ def test_quotes():
         else:
             log.warning('An error occurred while testing Stock/Fund quotes.')
 
-        
+
 #----------------------------------------------------------------------------------------
 if __name__=="__main__":
 
     print('')
     log.info(AboutTitle + ", Ver: " + AboutVersion)
-    
+
     #keep a backup copy of the sites.dat file
     backup = True
     if glob.glob('sites.dat') != []:
         if glob.glob('sites.bak') != []:
             if filecmp.cmp('sites.bak', 'sites.dat'): backup = False
         if backup: shutil.copy('sites.dat', 'sites.bak')
-            
+
     #get the user parameters
     userdat = site_cfg.site_cfg()
     Sites = userdat.sites
@@ -253,16 +253,16 @@ if __name__=="__main__":
         Sitenames.append(site)
 
     Sitenames.sort()
-    
+
     #do we already have a configuration file?  if so, read it in.
     pwkey, c_getquotes, AcctArray = rlib1.get_cfg()
-    
+
     #is the file password protected?  If so, we need to get passkey and decrypt the account info
     if pwkey != '':
         pwkey=rlib1.decrypt_pw(pwkey)
         rlib1.acctDecrypt(AcctArray, pwkey)
-   
-    
+
+
     #check system config for required folders
     if not os.path.exists(xfrdir):
         try:
@@ -289,12 +289,12 @@ if __name__=="__main__":
         else:
             menu_4 = '4. Change Password'
             menu_5 = '5. Remove Encryption'
-            
+
         if c_getquotes:
             menu_6 = ('6. Disable Stock/Fund Quotes')
         else:
             menu_6 = ('6. Enable Stock/Fund Quotes')
-            
+
         separator_line('Main Menu', 1)
         print("1. Add or Modify Account")
         print("2. List Accounts")
@@ -312,13 +312,13 @@ if __name__=="__main__":
         if menu_option == 1:
             #setup new account or replace an old one
             config_account()
-            
+
         elif menu_option == 2:
             #list existing accounts
             action = raw_input('Show account connection keys? Y/N [N]: ').upper()
             if action=='': action='N'
             list_accounts(action[0]=='Y')
-            
+
         elif menu_option == 3:
             #delete an account
             list_accounts()
@@ -349,26 +349,26 @@ if __name__=="__main__":
                     if not found:
                         rlib1.clientUID(url, user, delKey=True)
                         if action=='R': log.info('Connection settings reset for %s @ %s' % (user, url))
-                    
+
         elif menu_option == 4:
             #change security settings
             while True:
                 pwkey1 = pyDes.getDESpw('Enter NEW Master password')
                 pwkey2 = pyDes.getDESpw('ReEnter password')
-                
+
                 if pwkey2 == pwkey1:
                     pwkey = pwkey1
                     break
                 else:
                     print('\nPasswords do not match.  Try again...\n')
-            
+
         elif menu_option == 5:
             #remove security
             if pwkey != '':
                 doit = raw_input('Remove file encryption and password protection (Y/N) ').upper()
                 if doit == 'Y':
                     pwkey=''
-        
+
         elif menu_option == 6:
             #enable/disable stock quotes
             c_getquotes = not c_getquotes
@@ -376,11 +376,11 @@ if __name__=="__main__":
                 doit = (raw_input('Do you want to test Quote downloads? (Y/N)? ').upper() == 'Y')
                 if doit:
                     test_quotes()
-                                    
+
         elif menu_option == 7:
             #test an account
             acctnum = -1
-            
+
             list_accounts()
             ticker_test = len(AcctArray)+1
             print('{0:4}{1:20}'.format(str(ticker_test)+'.','Stock/Fund Prices'))
@@ -398,7 +398,7 @@ if __name__=="__main__":
                 doit = raw_input('Test Stock/Fund Pricing Updates (Y/N)? ').upper()
                 if doit == 'Y':
                     test_quotes()
-        
+
         elif menu_option == 8:
             #About
             print("\n\n"+"*"*70+"\n")
@@ -409,9 +409,9 @@ if __name__=="__main__":
             print("\tVersion:", AboutVersion)
             print("\n\n"+"*"*70+"\n")
             raw_input('Press Enter to continue')
-        
+
     #end_while (main menu)
-    
+
     pwkey_e = ''
     if pwkey != '':
         #encrypt the data
@@ -420,7 +420,7 @@ if __name__=="__main__":
         rlib1.acctEncrypt(AcctArray,pwkey)
         #encrypt the passkey
         pwkey_e = k.encrypt(pwkey, ' ')
-  
+
     #write the data
     f = open(cfgFile, 'wb')
     pickle.dump(pwkey_e, f)      #encrypted key (pw)

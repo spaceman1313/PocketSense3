@@ -8,6 +8,6 @@ import re
 def scrub(ofx, siteURL='', accType=''):
     #do what you want
     scrubPrint '...blah blah blah...'
-    
+
     #must return ofx
     return ofx

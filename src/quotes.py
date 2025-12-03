@@ -12,7 +12,7 @@
 
 # History
 # -----------------------------------------------------
-# 04-Mar-2010*rlc 
+# 04-Mar-2010*rlc
 #   - Initial changes/edits for incorporation w/ the "pocketsense" pkg (formatting, method of call, etc.)
 #   - Examples:
 #       - Debug control
@@ -48,7 +48,7 @@
 # 03Sep2013*rlc
 #   - Modify to support European versions of MS Money 2005 (and probably 2003/2004)
 #     * Added INVTRANLIST tag set
-#     * Added support for forceQuotes option.  Force additional quote reponse to adjust 
+#     * Added support for forceQuotes option.  Force additional quote reponse to adjust
 #       shares held to non-zero and back.
 #   - Updated YahooScrape code for updated Yahoo html screen-formatting
 # 19Jul2013*rlc
@@ -58,7 +58,7 @@
 #   - Added support for quoteAccount
 # 09Jan2014*rlc
 #   - Fixed bug related to ForceQuotes and change of calendar year.
-# 19Jan2014*rlc:  
+# 19Jan2014*rlc:
 #   -Added support for EnableGoogleFinance option
 #   -Reworked the way that quotes are retrieved, to improve reliability
 # 14Feb2014*rlc:
@@ -88,10 +88,10 @@ join = str.join
 
 class Security:
     """
-    Encapsulate a stock or mutual fund. A Security has a ticker, a name, a price quote, and 
+    Encapsulate a stock or mutual fund. A Security has a ticker, a name, a price quote, and
     the as-of date and time for the price quote. Name, price and as-of date and time are retrieved
     from Yahoo! Finance.
-    
+
     fields:
         status, source, ticker, name, price, quoteTime, pclose, pchange
     """
@@ -106,25 +106,25 @@ class Security:
         self.multiplier = item['m']
         self.symbol = item['s']
         self.status = True
-        
+
     def _removeIllegalChars(self, inputString):
         pattern = re.compile("[^a-zA-Z0-9 ,.-]+")
         return pattern.sub("", inputString)
-        
+
     def getQuote(self):
-        
-        #Yahoo! Finance:  
+
+        #Yahoo! Finance:
         #parse data packet from standard htm page
-        
+
         log.info('Getting quote for: %s' % self.ticker)
-        
+
         self.status=False
         self.source='Y'
         #note: each try for a quote sets self.status=true if successful
         if eYahoo:
             self.getYahooQuote()
             if self.status: self.source='Y'
-                        
+
         if not self.status:
             log.info('** %s: invalid quote response. Skipping.' % self.ticker)
             self.name = '*InvalidSymbol*'
@@ -133,7 +133,7 @@ class Security:
             name = self.ticker
             log.info('%s: %s %s %s %s' % (self.ticker, self.price, self.date, self.time, self.pchange))
 
-                
+
     def getYahooQuote(self):
         #read Yahoo json data api, and return csv
         #returns: quote= [name, price, quoteTime, pclose, pchange], all as strings
@@ -150,7 +150,7 @@ class Security:
         except:
             if Debug: log.debug('** Error reading %s' % self.quoteURL)
             self.status = False
-        
+
         if self.status:
             try:
                 ht = response.text.encode('ascii', 'ignore')
@@ -171,12 +171,12 @@ class Security:
                 #not formatted as expected?
                 if Debug: log.debug('An error occured when parsing the Yahoo Finance response for %s' % self.ticker)
                 self.status=False
-        
+
 class OfxWriter:
     """
     Create an OFX file based on a list of stocks and mutual funds.
     """
-    
+
     def __init__(self, currency, account, shares, stockList, mfList):
         self.currency = currency
         self.account = account
@@ -188,18 +188,18 @@ class OfxWriter:
     def get_dtasof(self):
         #15-Feb-2011: Use the latest quote date/time for the statement
         today = datetime.now()
-        dtasof   = today.strftime("%Y%m%d")+'120000'    #default to today @ noon     
+        dtasof   = today.strftime("%Y%m%d")+'120000'    #default to today @ noon
         lastdate = datetime(1,1,1)                      #but compare actual dates to long, long ago...
         for ticker in self.stockList + self.mfList:
             if ticker.datetime > lastdate and not ticker.datetime > today:
                 lastdate = ticker.datetime
-                dtasof = ticker.quoteTime  
-                
+                dtasof = ticker.quoteTime
+
         return dtasof
-        
+
     def _signOn(self):
         """Generate server signon response message"""
-    
+
         return OfxTag("SIGNONMSGSRSV1",
                     OfxTag("SONRS",
                          OfxTag("STATUS",
@@ -223,8 +223,8 @@ class OfxWriter:
         posmf = []
         for mf in self.mfList:
             posmf.append(self._pos("mf", mf.symbol, mf.price, mf.quoteTime))
-            
-        return OfxTag("INVPOSLIST",          
+
+        return OfxTag("INVPOSLIST",
                     join("", posstock),     #str.join("",StrList) = "str(0)+str(1)+str(2)..."
                     join("", posmf))
 
@@ -271,10 +271,10 @@ class OfxWriter:
                     OfxTag("STATUS",
                         OfxField("CODE", "0"),
                         OfxField("SEVERITY", "INFO")),
-                    OfxField("CLTCOOKIE","4"), 
+                    OfxField("CLTCOOKIE","4"),
                     stmt)
         return OfxTag("INVSTMTMSGSRSV1", s)
-        
+
     def _secList(self):
         stockinfo = []
         for stock in self.stockList:
@@ -311,7 +311,7 @@ class OfxWriter:
             info = OfxTag(type.upper() + "INFO", secInfo)
 
         return info
-        
+
     def getOfxMsg(self):
         #create main OFX message block
         return join('', [OfxTag('OFX',
@@ -346,12 +346,12 @@ def getYahooSession():
                 cookie = yahooFin['cookie']
                 crumb  = yahooFin['crumb']
                 expires = datetime.fromtimestamp(cookie.expires)
-                if datetime.now() > (expires - timedelta(days=1)): 
+                if datetime.now() > (expires - timedelta(days=1)):
                     cookie=None
         except Exception as e:
             log.debug('Error loading %s' % cookieFile)
 
-    if not cookie:  
+    if not cookie:
         #cookie not found or expiring soon.  refresh
         log.info('Fetching new Yahoo Finance cookie')
         response = requests.get("https://fc.yahoo.com", headers=headers, allow_redirects=True)
@@ -384,7 +384,7 @@ def getYahooSession():
                  )
     session = requests.session()
     session.headers.update(headers)
-    session.cookies.update({cookie.name: cookie.value})        
+    session.cookies.update({cookie.name: cookie.value})
     return session, crumb
 
 #----------------------------------------------------------------------------
@@ -392,7 +392,7 @@ def getQuotes():
 
     global YahooURL, eYahoo, GoogleURL, YahooTimeZone
     status = True    #overall status flag across all operations (true == no errors getting data)
-    
+
     global log
     log = logging.getLogger('root')
 
@@ -419,20 +419,20 @@ def getQuotes():
             sec.getQuote()
             status = status and sec.status
             if sec.status: stockList.append(sec)
-            
+
         for item in funds:
             sec = Security(item)
             sec.getQuote()
             status = status and sec.status
             if sec.status: mfList.append(sec)
-        
+
     qList = stockList + mfList
-    
+
     if len(qList) > 0:        #write results only if we have some data
-        #create quotes ofx file  
+        #create quotes ofx file
         if not os.path.exists(xfrdir):
             os.mkdir(xfrdir)
-        
+
         ofxFile1 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(1e5,1e6)) + ".ofx"
         writer = OfxWriter(currency, account, 0, stockList, mfList)
         writer.writeFile(ofxFile1)
@@ -443,13 +443,13 @@ def getQuotes():
            ofxFile2 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(1e5,1e6)) + ".ofx"
            writer = OfxWriter(currency, account, 0.001, stockList, mfList)
            writer.writeFile(ofxFile2)
-        
+
         if glob.glob(ofxFile1) == []:
             status = False
 
         # write quotes.htm file
         htmFileName = QuoteHTMwriter(qList)
-        
+
         #append results to QuoteHistory.csv if enabled
         if status and userdat.savequotehistory:
             csvFile = xfrdir+"QuoteHistory.csv"
@@ -466,5 +466,5 @@ def getQuotes():
                         .format(s.symbol, s.name, s.price, t2, s.pclose, s.pchange)
                 f.write(line)
             f.close()
-        
+
     return status, ofxFile1, ofxFile2, htmFileName

@@ -5,7 +5,7 @@ from scrubber import scrubPrint
 import re
 
 def scrub(ofx, siteURL, accType):
-    
+
     if 'DISCOVERCARD' in siteURL: ofx= _scrubDiscover(ofx, accType)
     return ofx
 
@@ -21,20 +21,20 @@ def scrub(ofx, siteURL, accType):
 #                amt    = dollar amount of the transaction, including a hypen for negative entries (e.g., -24.95)
 #                #####  = 5 digit serial number
 
-#   2.  The 5-digit serial number can change each time you connect to the server, 
-#          meaning that the same transaction can download with different FITID numbers.  
-#       That's not good, since Money requires a unique FITID value for each valid transaction.  
+#   2.  The 5-digit serial number can change each time you connect to the server,
+#          meaning that the same transaction can download with different FITID numbers.
+#       That's not good, since Money requires a unique FITID value for each valid transaction.
 #       Varying serial numbers result in duplicate transactions!
 
-#   3.  We'll replace the 5-digit serial number with one of our own.  
+#   3.  We'll replace the 5-digit serial number with one of our own.
 #       The default will be 0 for every transaction,
 #          and we'll increment by one for each subsequent transaction that that matches
 #          a previous transaction in the file.
 
 # 8/14/2016: Discover BANK now uses an FITID format of SDF######, where ###### is unique for the day.
-#            The length seems to vary, but the largest observed is 6 digits  
-#            Unfortunately, the digits can be assigned to multiple transactions on the same day, so it isn't 
-#               guaranteed to be unique.  
+#            The length seems to vary, but the largest observed is 6 digits
+#            Unfortunately, the digits can be assigned to multiple transactions on the same day, so it isn't
+#               guaranteed to be unique.
 #            Modified routine to uniquely handle BASTMT vs CCSTMT statements.
 
 # NOTE:  There was brief period in late 2017 where Discover Bank changed their fitid format, but soon
@@ -43,9 +43,9 @@ def scrub(ofx, siteURL, accType):
 def _scrubDiscover(ofx, accType):
 
     global _scrub_Discover_knowns  #track of Discover FITID values between regex.sub() calls
-    _scrub_Discover_knowns = []  
-    
-    if accType=='CCSTMT': 
+    _scrub_Discover_knowns = []
+
+    if accType=='CCSTMT':
         scrubPrint("Scrubber: Processing Discover Card statement.")
     else:
         scrubPrint("Scrubber: Processing Discover Bank statement.")
@@ -57,7 +57,7 @@ def _scrubDiscover(ofx, accType):
     # also helps block multi-transaction matching in below regexes via ^\s option
     p = re.compile(r'(<STMTTRN>)',re.IGNORECASE)
     ofx = p.sub(r'\n<STMTTRN>', ofx)
-    
+
     #regex p captures everything from <FITID> up to the next <tag>, but excludes the next "<".
     #p produces 2 results:  r.group(1) = <FITID> field, r.group(2)=value
     #the ^<\s prevents matching on the next < or newline
@@ -65,7 +65,7 @@ def _scrubDiscover(ofx, accType):
 
     #call substitution (inline lamda, takes regex result = r as tuple)
     ofx_final = p.sub(lambda r: _scrubDiscover_r1(r, accType), ofx)
-   
+
     if accType=='BASTMT':
         #regex p captures everything from <TRNTYPE>DEBIT up to the next "<" aftert the <NAME>Check tag and field.
         # Discover Bank codes checks as
@@ -90,12 +90,12 @@ def _scrubDiscover_r1(r, accType):
     fieldtag = r.group(1)
     fitid = r.group(2).strip(' ')
     fitid_b = fitid                     #base fitid before annotating
-    
+
     #strip the serial value for credit card transactions
-    if accType=='CCSTMT': 
+    if accType=='CCSTMT':
         bx = len(fitid) - 5
         fitid_b = fitid[:bx]
-    
+
     #find a unique serial#, from 0 to 9999
     seq = 0   #default
     while seq < 9999:
@@ -105,7 +105,7 @@ def _scrubDiscover_r1(r, accType):
             seq=seq+1
         else:
             break   #unique value... write it out
-        
+
     _scrub_Discover_knowns.append(fitid)         #remember the assigned value between calls
     return fieldtag + fitid             #return the new string for regex.sub()
 
