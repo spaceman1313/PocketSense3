@@ -45,7 +45,7 @@
 #   - Update to python3
 
 import os, glob, time, re
-import ofx, quotes, site_cfg, scrubber
+import ofx_online, quotes, site_cfg, scrubber
 from control2 import *
 from rlib1 import *
 
@@ -142,7 +142,7 @@ if __name__=="__main__":
                 badConnects = []   #track [sitename, username] for failed connections so we don't risk locking an account
                 for acct in AcctArray:
                     if [acct[0], acct[3]] not in badConnects:
-                        status, ofxFile = ofx.getOFX(acct, interval)
+                        status, ofxFile = ofx_online.getOFX(acct, interval)
                         if not status and userdat.skipFailedLogon:
                             badConnects.append([acct[0], acct[3]])
                         else:

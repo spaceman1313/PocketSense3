@@ -30,7 +30,7 @@
 #   - Update to python3
 
 import os, glob, re, pickle, shutil, time
-import pyDes, ofx, quotes, site_cfg, filecmp
+import pyDes, ofx_online, quotes, site_cfg, filecmp
 import rlib1
 from control2 import *  #global settings
 
@@ -106,7 +106,7 @@ def config_account():
         stat=True
         try:
             log.info('Requesting accounts for %s @ %s' % (username, sitename))
-            client = ofx.OFXClient(userdat.sites[sitename], username, password)
+            client = ofx_online.OFXClient(userdat.sites[sitename], username, password)
             query = client.acctQuery()
             if Debug: log.debug(query)
             client.doQuery(query, tmpfile)
@@ -196,7 +196,7 @@ def config_account():
                 test_acct(acct)
 
 def test_acct(acct):
-    status, ofxfile = ofx.getOFX(acct, 31)
+    status, ofxfile = ofx_online.getOFX(acct, 31)
     if status:
         if ofxfile !='':
             log.info('Download completed successfully')
