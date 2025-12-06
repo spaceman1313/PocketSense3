@@ -55,7 +55,7 @@ userdat = site_cfg.site_cfg()
 log = create_logger('root', 'getdata.log')
 if Debug:
     logging.basicConfig(level=logging.DEBUG)
-    log.warn("**DEBUG Enabled: See Control2.py to disable.")
+    log.warning("**DEBUG Enabled: See Control2.py to disable.")
     log.debug('xfrdir = %s' % xfrdir)
 
 # Temporary globals
@@ -85,6 +85,53 @@ def getSite(ofx):
                 break
 
     return site
+
+
+def get_directconnect_ofx_files(acct_array: list, dl_interval: int) -> tuple[bool, list]:
+    """
+    Retrieves OFX files for all Direct Connect accounts.
+
+    Retrieves OFX files for all Direct Connect accounts defined in acct_array.
+    If an account fails to connect, it is skipped for the remainder of the session
+    to help prevent account lockouts.
+
+    Args:
+        acct_array (list): List of account information.
+        dl_interval (int): Download interval in days.
+    Returns:
+        bool: Overall status of the download operations.
+        list: List of downloaded OFX files.
+    """
+    # Verify that account info exists
+    if len(acct_array) == 0:
+        log.info("No accounts have been configured. Run SETUP.PY to add accounts")
+        return False, []
+
+    # Track [sitename, username] for failed connections so we don't risk locking an
+    # account
+    bad_connects = []
+
+    # Initialize output variables
+    ofx_list = []
+    result = True
+
+    # Process accounts
+    for acct in acct_array:
+        if [acct[0], acct[3]] not in bad_connects:
+            # Carry out the online OFX download
+            status, ofx_file = ofx_online.get_dc_OFX(acct, dl_interval)
+            if status:
+                # Add account and OFX file to output list
+                ofx_list.append([acct[0], acct[1], ofx_file])
+            else:
+                if userdat.skipFailedLogon:
+                    # Log and skip any further attempts for this site/user combo
+                    bad_connects.append([acct[0], acct[3]])
+
+            # Update overall result status
+            result = result and status
+
+    return result, ofx_list
 
 
 def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
@@ -224,20 +271,8 @@ if __name__=="__main__":
         for QEntry in Queue:
 
             if QEntry == 'Accts':
-                if len(AcctArray) == 0:
-                  log.info("No accounts have been configured. Run SETUP.PY to add accounts")
-
-                #process accounts
-                badConnects = []   #track [sitename, username] for failed connections so we don't risk locking an account
-                for acct in AcctArray:
-                    if [acct[0], acct[3]] not in badConnects:
-                        status, ofxFile = ofx_online.getOFX(acct, interval)
-                        if not status and userdat.skipFailedLogon:
-                            badConnects.append([acct[0], acct[3]])
-                        else:
-                            ofxList.append([acct[0], acct[1], ofxFile])
-                        stat1 = stat1 and status
-                        print("")
+                stat1, newList = get_directconnect_ofx_files(AcctArray, interval)
+                ofxList.extend(newList)
 
             if QEntry == 'importFiles':
                 #process files from import folder [manual user downloaded files]
@@ -281,16 +316,16 @@ if __name__=="__main__":
 
             #get stock/fund quotes
             if QEntry == 'Quotes' and getquotes:
-                status, quoteFile1, quoteFile2, htmFileName = quotes.getQuotes()
+                qstatus, quoteFile1, quoteFile2, htmFileName = quotes.getQuotes()
                 z = ['Stock/Fund Quotes','',quoteFile1]
-                stat1 = stat1 and status
+                stat1 = stat1 and qstatus
                 if glob.glob(quoteFile1) != []:
                     ofxList.append(z)
                 else: quotesExist=False
                 print("")
 
                 # display the HTML file after download if requested to always do so
-                if status and userdat.showquotehtm: os.startfile(htmFileName)
+                if qstatus and userdat.showquotehtm: os.startfile(htmFileName)
 
         if len(ofxList) > 0:
             log.info('Downloads completed.')
@@ -299,7 +334,7 @@ if __name__=="__main__":
 
         else:
             if len(AcctArray)>0 or (getquotes and len(userdat.stocks)>0):
-                log.warn("No files were downloaded. Verify network connection and try again later.")
+                log.warning("No files were downloaded. Verify network connection and try again later.")
             input("Press <Enter> to continue...")
 
         if Debug:

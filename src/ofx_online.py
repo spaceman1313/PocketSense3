@@ -303,7 +303,7 @@ class OFXClient:
         if response: response.close()
 #------------------------------------------------------------------------------
 
-def getOFX(account, interval):
+def get_dc_OFX(account, interval):
 
     sitename   = account[0]
     _acct_num  = account[1]             #account value defined in sites.dat
@@ -334,6 +334,7 @@ def getOFX(account, interval):
         time.sleep(delay)
 
     client = OFXClient(site, user, password)
+    log.info("")
     log.info('%s: %s: Getting records since: %s' % (sitename,acct_num,dtstart))
 
     status = True

@@ -196,7 +196,7 @@ def config_account():
                 test_acct(acct)
 
 def test_acct(acct):
-    status, ofxfile = ofx_online.getOFX(acct, 31)
+    status, ofxfile = ofx_online.get_dc_OFX(acct, 31)
     if status:
         if ofxfile !='':
             log.info('Download completed successfully')
