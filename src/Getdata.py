@@ -54,8 +54,12 @@ print('')
 userdat = site_cfg.site_cfg()
 log = create_logger('root', 'getdata.log')
 if Debug:
+    logging.basicConfig(level=logging.DEBUG)
     log.warn("**DEBUG Enabled: See Control2.py to disable.")
     log.debug('xfrdir = %s' % xfrdir)
+
+# Temporary globals
+doit = 'Y'
 
 def getSite(ofx):
     # find matching site entry for ofx
@@ -82,6 +86,92 @@ def getSite(ofx):
 
     return site
 
+
+def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
+                         htm_filename: str):
+    """
+    Sends all OFX files to Microsoft Money.
+
+    Sends all OFX files in ofxList to Microsoft Money.  If the user has
+    enabled the combineOFX option, all files are combined into a single file
+    before sending.
+
+    Args:
+        ofx_list (list): List containting all OFX files to send to Money.
+        quotes_exist (bool): Was a quotes file downloaded. TODO: currently not set.
+        quote_file2 (str): Downloaded ForceQuotes OFX file.
+        htm_filename (str): Name of the quotes HTML file.
+    """
+
+    gogo = 'Y'
+    cfile = ""
+
+    # Combine OFX files if option set
+    if userdat.combineofx and len(ofx_list) > 1:
+        cfile=combineOfx(ofx_list)
+
+    # Confirm with user that they want to upload results to Money
+    if doit == 'I' or Debug:
+        gogo = input('Upload results to Money? (Y/N/V=Verify) [Y] ').upper()
+        gogo = 'Y' if gogo=='' else gogo[:1]    #first letter
+
+    # Don't send to Money
+    match gogo:
+        case 'N':
+            log.info("User cancelled.  Results not sent to Money.")
+
+        case 'Y' | 'V':
+            log.debug('User confirmed upload to Money.')
+
+            # Send ForceQuotes file to Money if defined (NEEDS CLEANUP)
+            if glob.glob(quote_file2):
+                if Debug:
+                    log.debug("Importing ForceQuotes statement: %s", quote_file2)
+                run_file(quote_file2)  #force transactions for MoneyUK
+                input(
+                    "ForceQuote statement loaded.  Accept in Money and press <Enter> "
+                    "to continue."
+                    )
+
+            # Send individual file(s) or combined file to Money
+            log.info('Sending statement(s) to Money...')
+
+            if cfile and gogo != 'V':
+                log.info("Importing combined OFX file: %s", cfile)
+                run_file(cfile)
+            else:
+                for ofxfile in ofx_list:
+                    # Upload each file one at a time, verify if requested
+                    upload = 'Y'
+                    if gogo == 'V':
+                        #ofxfile[0] = site, ofxfile[1] = accnt#, ofxfile[2] = ofxFile
+                        upload = input(
+                            f"Upload {ofxfile[0]} : {ofxfile[1]}? (y/n) [n]"
+                            ).upper()
+
+                    if upload == 'Y':
+                        log.info("Importing %s", ofxfile[2])
+                        run_file(ofxfile[2])
+
+                    # Slight delay, to force load order in Money
+                    time.sleep(0.5)
+
+        case _:
+            log.info('Invalid selection.  Results not sent to Money.')
+
+    # Ask to show quotes.htm if defined in sites.dat (need to deal with showquotehtm
+    # option)
+    if userdat.askquotehtm and quotes_exist:
+        ask = input("Open <Quotes.htm> in the default browser? (y/n) [n]").upper()
+        if ask=='Y':
+            log.debug("Opening <Quotes.htm> in broswer per user request.")
+            os.startfile(htm_filename)  #don't wait for browser close
+
+    # Keep window/screen open at end until user confirms
+    if userdat.promptEnd:
+        input("\n\nPress <Enter> to continue...")
+
+
 if __name__=="__main__":
 
     stat1 = True    #overall status flag across all operations (true == no errors getting data)
@@ -93,7 +183,6 @@ if __name__=="__main__":
         httpsVerify = False if os.environ.get('PYTHONHTTPSVERIFY','')=='0' else True
         log.debug('httpsVerify ' + 'ON' if httpsVerify else 'OFF')
 
-    doit='Y'
     if userdat.promptStart:
         doit = input("Download transactions? (Y/N/I=Interactive) [Y] ").upper()
         doit = 'Y' if doit=='' else doit[:1]  #first char
@@ -205,46 +294,8 @@ if __name__=="__main__":
 
         if len(ofxList) > 0:
             log.info('Downloads completed.')
-            verify = False
-            gogo = 'Y'
-            if userdat.combineofx and gogo != 'V':
-                cfile=combineOfx(ofxList)       #create combined file
-
-            if doit == 'I' or Debug:
-                gogo = input('Upload results to Money? (Y/N/V=Verify) [Y] ').upper()
-                gogo = 'Y' if gogo=='' else gogo[:1]    #first letter
-
-            if gogo == 'N': log.info('Results not sent to Money.  User cancelled.')
-
-            if gogo in 'YV':
-                if glob.glob(quoteFile2) != []:
-                    if Debug: log.debug("Importing ForceQuotes statement: %s" % quoteFile2)
-                    runFile(quoteFile2)  #force transactions for MoneyUK
-                    input('ForceQuote statement loaded.  Accept in Money and press <Enter> to continue.')
-
-                log.info('Sending statement(s) to Money...')
-                if userdat.combineofx and cfile and gogo != 'V':
-                    runFile(cfile)
-                else:
-                    for file in ofxList:
-                        upload = True
-                        if gogo == 'V':
-                            #file[0] = site, file[1] = accnt#, file[2] = ofxFile
-                            upload = (input('Upload ' + file[0] + ' : ' + file[1] + ' (Y/N) ').upper() == 'Y')
-
-                        if upload:
-                           log.info("Importing " + file[2])
-                           runFile(file[2])
-
-                        time.sleep(0.5)   #slight delay, to force load order in Money
-
-            #ask to show quotes.htm if defined in sites.dat
-            if userdat.askquotehtm and quotesExist:
-                ask = input('Open <Quotes.htm> in the default browser (y/n)?').upper()
-                if ask=='Y': os.startfile(htmFileName)  #don't wait for browser close
-
-            if userdat.promptEnd:
-                input('\n\nPress <Enter> to continue...')
+            # TODO: quotesExist is never set to True...fix this
+            send_files_to_money( ofxList, quotesExist, quoteFile2, htmFileName)
 
         else:
             if len(AcctArray)>0 or (getquotes and len(userdat.stocks)>0):

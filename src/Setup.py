@@ -202,7 +202,7 @@ def test_acct(acct):
             log.info('Download completed successfully')
             test = input('Send the results to Money (y/n)? ').upper()
             if test=='Y':
-                rlib1.runFile(ofxfile)
+                rlib1.run_file(ofxfile)
                 input('Press Enter to continue...')
             else:
                 log.info('Results not sent to Money.  Cancelled by user.')
@@ -221,10 +221,10 @@ def test_quotes():
             ask = input('Send the results to Money (y/n)? ').upper()
             if ask=='Y':
                 if ofxFile2 != '':
-                    rlib1.runFile(ofxFile2)
+                    rlib1.run_file(ofxFile2)
                     if Debug: input('\nPress <Enter> to send ForceQuotes statement.')
                     time.sleep(0.5)      #slight delay, to force load order in Money
-                rlib1.runFile(ofxFile1)
+                rlib1.run_file(ofxFile1)
                 input('Press Enter to continue...')
         else:
             log.warning('An error occurred while testing Stock/Fund quotes.')

@@ -25,6 +25,8 @@ import os
 Debug = False
 #Debug = True           #debug mode = enable only when testing and delete log files after using.
 
+SendtoMoney = False     #enable sending downloaded files to MS Money
+
 #logging
 logFileEnable = True
 logFileLimit  = 10       #logfile size limit (MB)

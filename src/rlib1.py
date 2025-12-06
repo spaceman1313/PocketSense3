@@ -431,8 +431,14 @@ def float2(str):
     return f
 
 def run_file(filename):
-    #encapsulate call to os.system in quotes
-    os.system('"'+filename+'"')
+
+    if SendtoMoney:
+        #encapsulate call to os.system in quotes
+        os.system('"'+filename+'"')
+    else:
+        log = logging.getLogger('root')
+        log.info('SendtoMoney is disabled.  Not sending %s to Money.', filename)
+
     return
 
 def copy_txt_file(infile, outfile):
