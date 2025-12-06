@@ -95,7 +95,7 @@ def clientUID(url, username, delKey=False):
     #get urlHost:  example: url='https://test.ofx.com/my/script'
     #path='//test.ofx.com/my/script';  Host= 'test.ofx.com' ; Selector= '/my/script'
     urlHost = urllib.parse.urlparse(url).netloc
-    key = hashlib.md5(urlHost+username).digest()
+    key = hashlib.md5(f"{urlHost}{username}".encode('utf-8')).digest()
 
     if glob.glob(dfile) != []:
         #lookup
