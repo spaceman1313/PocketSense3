@@ -430,7 +430,7 @@ def float2(str):
         f = 0.0
     return f
 
-def runFile(filename):
+def run_file(filename):
     #encapsulate call to os.system in quotes
     os.system('"'+filename+'"')
     return
