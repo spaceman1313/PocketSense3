@@ -506,5 +506,5 @@ def combineOfx(ofxList):
     f=open(cfile,'w')
     f.write(combOfx)
     f.close()
-    print('Combined OFX created: %s"' % cfile)
+    print(f"Combined OFX created: {cfile}")
     return cfile
