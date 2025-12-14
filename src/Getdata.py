@@ -41,13 +41,34 @@
 #     and if it looks like a valid OFX file, will be processed the same as a downloaded statement (scrubbed, etc.)
 #19Jun2023*rlc
 #   - add logging
-#03Dec2023*cgn
+#14Dec2023*cgn
 #   - Update to python3
 
+
+# Define the required minimum Python version.  Make check compatible with Python 2 since
+# a lot of users are coming from 2.7.15
+import sys
+REQUIRED_MAJOR = 3
+REQUIRED_MINOR = 10
+
+if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
+    # Construct a friendly, informative error message
+    # pylint: disable=consider-using-f-string
+    error_message = (
+        "Pocketsense3 requires Python version %d.%d or higher. You are currently "
+        "using Python version %d.%d. Please upgrade your Python installation."
+        % (REQUIRED_MAJOR, REQUIRED_MINOR, sys.version_info[0], sys.version_info[1])
+        )
+    # pylint: enable=consider-using-f-string
+    raise RuntimeError(error_message) # Use RuntimeError for clarity to non-Python users
+
+# Now import modules as we normally would
+# pylint: disable=wrong-import-position
 import os, glob, time, re
 import ofx, quotes, site_cfg, scrubber
 from control2 import *
 from rlib1 import *
+# pylint: enable=wrong-import-position
 
 #startup
 print('')
