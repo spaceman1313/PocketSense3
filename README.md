@@ -12,6 +12,12 @@ CSV to OFX scripts.  This will allow users to continue using OFX functionality i
 Microsoft Money and other legacy accounting systems even as more banks discontinue the
 use of OFX.
 
+Please be aware that as of December 2025, the only two banks to which I have access with
+DirectConnection are Fidelity and NetBenefits (which are really the same bank).  As such
+it is impossible for me to test many of the different permutations users may have.  I
+rely on you to provide me with feedback and bugs.  Please email me or enter a GitHub
+issue if you encounter a problem.
+
 I can be reached at pocketsense3 at the usual g email system.
 
 Requirements:
