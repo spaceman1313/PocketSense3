@@ -100,7 +100,7 @@ def clientUID(url, username, delKey=False):
     if glob.glob(dfile) != []:
         #lookup
         f = open(dfile,'rb')
-        dTable = pickle.load(f)
+        dTable = pickle.load(f, encoding='bytes')
         uuid = dTable.get(key, None)
         f.close()
 

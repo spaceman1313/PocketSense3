@@ -30,6 +30,6 @@ Follow the instructions in the original PocketSense website, but use Python 3.10
 higher:
 https://sites.google.com/site/pocketsense/home/msmoneyfixp1/p2
 
-Transferring from PocketSense for Python 2:
-You should be able to copy your sites.dat and ofx_config.cfg files and use the new
-scripts without any issues.  I have not yet tested with an encrypted configuration file.
+Transferring from PocketSense for Python 2: You should be able to copy your `sites.dat`,
+`connect.key`, and `ofx_config.cfg` files and use the new scripts without any issues.  I
+have not yet tested with an encrypted configuration file.
