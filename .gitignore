@@ -9,3 +9,6 @@ src/__pycache__/
 src/xfr/
 src/import/
 src/*.pyc
+.vscode/launch.json
+.vscode/settings.json
+src/2.ofx_config.cfg
