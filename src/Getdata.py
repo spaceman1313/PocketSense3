@@ -46,7 +46,8 @@
 
 
 # Define the required minimum Python version.  Make check compatible with Python 2 since
-# a lot of users are coming from 2.7.15
+# a lot of users are coming from 2.7.15.  Need to do this before any other imports to
+# prevent syntax errors on older versions.
 import sys
 REQUIRED_MAJOR = 3
 REQUIRED_MINOR = 10
@@ -64,7 +65,11 @@ if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
 
 # Now import modules as we normally would
 # pylint: disable=wrong-import-position
-import os, glob, time, re
+import os
+import glob
+import time
+import re
+
 import ofx_online, quotes, site_cfg, scrubber
 from control2 import *
 from rlib1 import *
@@ -83,6 +88,7 @@ if Debug:
 doit = 'Y'
 
 def getSite(ofx):
+
     # find matching site entry for ofx
     # matches on FID or BANKID value found in ofx and in sites list
 
@@ -119,9 +125,11 @@ def get_directconnect_ofx_files(acct_array: list, dl_interval: int) -> tuple[boo
     Args:
         acct_array (list): List of account information.
         dl_interval (int): Download interval in days.
+
     Returns:
-        bool: Overall status of the download operations.
-        list: List of downloaded OFX files.
+        A 2-element tuple containing:
+            - bool: Overall status of the download operations.
+            - list: List of downloaded OFX files.
     """
     # Verify that account info exists
     if len(acct_array) == 0:
