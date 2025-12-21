@@ -101,7 +101,7 @@ def clientUID(url, username, delKey=False):
         #lookup
         f = open(dfile,'rb')
         dTable = pickle.load(f, encoding='bytes')
-        uuid = dTable.get(key, None)
+        uuid = dTable.get(key, None).decode()
         f.close()
 
     if uuid==None or (delKey and uuid!=None):
