@@ -345,6 +345,8 @@ def getOFX(account, interval):
     ofxFileSuffix = str(random.randrange(int(1e5),int(1e6))) + ".ofx"
     ofxFileName = xfrdir + sitename + dtnow + ofxFileSuffix
 
+    msg = "Unknown error occurred while processing OFX request for site: " + sitename
+    
     try:
         if acct_num == '':
             query = client.acctQuery()
