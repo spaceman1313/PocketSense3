@@ -163,6 +163,69 @@ def get_directconnect_ofx_files(acct_array: list, dl_interval: int) -> tuple[boo
     return result, ofx_list
 
 
+def get_import_ofx_files() -> tuple[bool, list]:
+    """
+    Retrieves OFX files in the `import` directory
+
+    Retrieves all OFX files in the `import` directory. If a file looks like a valid OFX
+    file, it is processed and moved to the `xfrdir` directory.
+
+    Returns:
+        A 2-element tuple containing:
+            - bool: Overall status of the download operations.
+            - list: List of downloaded OFX files.
+    """
+
+    log.info('Searching %s for statements to import', importdir)
+
+    # Initialize output variables
+    ofx_list = []
+    result = True
+
+    # Process all files in import folder [manual user downloaded files].
+    # Include anything that looks like a valid ofx file regardless of extension.
+    for f in glob.glob(importdir+'*.*'):
+
+        # Get the parts of the filename
+        fname = os.path.basename(f)             # full base filename.extension
+        bext  = os.path.splitext(fname)[1]      # file extension
+
+        # Read the file
+        with open(f) as ifile:
+            dat = ifile.read()
+
+        # Only process if it looks like an ofx file
+        if validOFX(dat) == '':
+            log.info("Importing %s", fname)
+
+            # Scrub file if it hasn't already been imported (and hence, scrubbed)
+            if 'NEWFILEUID:PSIMPORT' not in dat[:200]:
+                try:
+                    site = getSite(dat)
+                    scrubber.scrub(f, site)
+                except re.error:
+                    log.info("No site defined for %s in sites.dat: skipping scrub "
+                             "routines",  fname)
+
+            # Set NEWFILEUID:PSIMPORT to flag the file as having already been imported
+            # Don't want to accidentally scrub twice
+            with open(f, 'r', encoding='utf-8') as ifile:
+                ofx = ifile.read()
+            pattern = re.compile(r'NEWFILEUID:.*')
+            ofx2 = pattern.sub('NEWFILEUID:PSIMPORT', ofx)
+            if ofx2:
+                with open(f, 'w') as ofile:
+                    ofile.write(ofx2)
+
+            # Preserve original file type but save w/ ofx extension and move to xfrdir
+            outname = xfrdir+fname + ('' if bext=='.ofx' else '.ofx')
+            os.rename(f, outname)
+            ofx_list.append(['import file', '', outname])
+            log.info('%s saved to %s', fname, outname)
+
+    return result, ofx_list
+
+
 def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
                          htm_filename: str):
     """
@@ -300,48 +363,14 @@ if __name__=="__main__":
         for QEntry in Queue:
 
             if QEntry == 'Accts':
-                stat1, newList = get_directconnect_ofx_files(AcctArray, interval)
+                stat, newList = get_directconnect_ofx_files(AcctArray, interval)
                 ofxList.extend(newList)
+                stat1 = stat1 and stat
 
             if QEntry == 'importFiles':
-                #process files from import folder [manual user downloaded files]
-                #include anything that looks like a valid ofx file regardless of extension
-                #attempts to find site entry by FID found in the ofx file
-
-                log.info('Searching %s for statements to import' % importdir)
-                for f in glob.glob(importdir+'*.*'):
-                    fname = os.path.basename(f)   #full base filename.extension
-                    bname = os.path.splitext(fname)[0]     #basename w/o extension
-                    bext  = os.path.splitext(fname)[1]     #file extension
-                    with open(f) as ifile:
-                        dat = ifile.read()
-
-                    #only import if it looks like an ofx file
-                    if validOFX(dat) == '':
-                        log.info("Importing %s" % fname)
-                        if 'NEWFILEUID:PSIMPORT' not in dat[:200]:
-                            #only scrub if it hasn't already been imported (and hence, scrubbed)
-                            try:
-                                site = getSite(dat)
-                                scrubber.scrub(f, site)
-                            except:
-                                log.info('No site defined for %s in sites.dat: skipping scrub routines' % fname)
-
-
-                        #set NEWFILEUID:PSIMPORT to flag the file as having already been imported/scrubbed
-                        #don't want to accidentally scrub twice
-                        with open(f, 'r', encoding='utf-8', newline='') as ifile:
-                            ofx = ifile.read()
-                        p = re.compile(r'NEWFILEUID:.*')
-                        ofx2 = p.sub('NEWFILEUID:PSIMPORT', ofx)
-                        if ofx2:
-                            with open(f, 'w') as ofile:
-                                ofile.write(ofx2)
-                        #preserve original file type but save w/ ofx extension
-                        outname = xfrdir+fname + ('' if bext=='.ofx' else '.ofx')
-                        os.rename(f, outname)
-                        ofxList.append(['import file', '', outname])
-                        log.info('%s saved to %s' % (fname, outname))
+                stat, newList = get_import_ofx_files()
+                ofxList.extend(newList)
+                stat1 = stat1 and stat
 
             #get stock/fund quotes
             if QEntry == 'Quotes' and getquotes:

@@ -76,7 +76,7 @@ def scrub(filename, site):
     dtHrs = FieldVal(site, 'timeOffset')
     accType = FieldVal(site, 'CAPS')[1]
     site_skip_zt = FieldVal(site, 'skipzerotrans')
-    with open(filename,'r', newline='') as f:
+    with open(filename,'r') as f:
         ofx = f.read()  #as-found ofx message
 
     ofx = _scrubHeader(ofx) #Remove illegal spaces in OFX header lines
