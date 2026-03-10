@@ -373,8 +373,8 @@ if __name__=="__main__":
         elif menu_option == 4:
             #change security settings
             while True:
-                pwkey1 = pyDes.getDESpw('Enter NEW Master password')
-                pwkey2 = pyDes.getDESpw('ReEnter password')
+                pwkey1 = pyDes.getDESpw('Enter NEW Master password').encode()
+                pwkey2 = pyDes.getDESpw('ReEnter password').encode()
 
                 if pwkey2 == pwkey1:
                     pwkey = pwkey1
