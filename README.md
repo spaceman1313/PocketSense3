@@ -1,4 +1,4 @@
-#PocketSense3
+# PocketSense3
 Python3 implementation of PocketSense OFX handling scripts
 
 This is a Python3 implementation of the PocketSense scripts developed by Robert and found
@@ -20,16 +20,22 @@ issue if you encounter a problem.
 
 I can be reached at pocketsense3 at the usual g email system.
 
-Requirements:
+### Requirements:
 I believe the scripts should be compatible with Python 3.10 and higher, however I have
 only tested them with Python 3.14 (miniconda distribution).  You will also need to
 install the `requests` package in your Python installation.
 
-Installation:
+### Installation:
 Follow the instructions in the original PocketSense website, but use Python 3.10 or
 higher:
 https://sites.google.com/site/pocketsense/home/msmoneyfixp1/p2
 
-Transferring from PocketSense for Python 2: You should be able to copy your `sites.dat`,
-`connect.key`, and `ofx_config.cfg` files and use the new scripts without any issues.  I
-have not yet tested with an encrypted configuration file.
+### Transferring from PocketSense for Python 2:
+You should be able to copy your `sites.dat`, `connect.key`, and `ofx_config.cfg` files
+and use the new scripts without any issues. I stronly recommend you unencrypt your
+ofx_config.cfg file by running the PocketSense2 setup utility before encryptying it again
+in PocketSense3.  Be aware that PocketSense (both 2 and 3) use DES encryption.  Probably
+good enough for storing passwords on your own computer, but generally the DES algorithm
+is no longer considered the best for encrypting sensitive data. Please retain copies of
+your original configuration files. PocketSense3 will update the files with a format that
+is not backwards compatible.
