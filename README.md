@@ -21,7 +21,7 @@ issue if you encounter a problem.
 I can be reached at pocketsense3 at the usual g email system.
 
 ### Requirements:
-I believe the scripts should be compatible with Python 3.10 and higher, however I have
+I believe the scripts should be compatible with Python 3.11 and higher, however I have
 only tested them with Python 3.14 (miniconda distribution).  You will also need to
 install the `requests` package in your Python installation.
 
@@ -32,8 +32,8 @@ https://sites.google.com/site/pocketsense/home/msmoneyfixp1/p2
 
 ### Transferring from PocketSense for Python 2:
 You should be able to copy your `sites.dat`, `connect.key`, and `ofx_config.cfg` files
-and use the new scripts without any issues. I stronly recommend you unencrypt your
-ofx_config.cfg file by running the PocketSense2 setup utility before encryptying it again
+and use the new scripts without any issues. I strongly recommend you unencrypt your
+ofx_config.cfg file by running the PocketSense2 setup utility before encrypting it again
 in PocketSense3.  Be aware that PocketSense (both 2 and 3) use DES encryption.  Probably
 good enough for storing passwords on your own computer, but generally the DES algorithm
 is no longer considered the best for encrypting sensitive data. Please retain copies of

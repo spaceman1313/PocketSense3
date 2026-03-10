@@ -33,7 +33,7 @@
 # a lot of users are coming from 2.7.15
 import sys
 REQUIRED_MAJOR = 3
-REQUIRED_MINOR = 10
+REQUIRED_MINOR = 11
 
 if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
     # Construct a friendly, informative error message
