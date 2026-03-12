@@ -116,6 +116,9 @@ class site_cfg:
         self.skipFailedLogon = True
         self.promptStart = True
         self.promptEnd   = False
+        self.fetchRemote = False
+        self.fetchImport = True
+        self.fetchQuotes = True
 
         if glob.glob(self.datfile) == []:
             if glob.glob(self.bakfile) != []:

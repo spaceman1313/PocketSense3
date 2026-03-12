@@ -85,7 +85,7 @@ if Debug:
     log.debug('xfrdir = %s' % xfrdir)
 
 # Temporary globals
-doit = 'Y'
+interactiveFlag = 'Y'
 
 def getSite(ofx):
 
@@ -250,7 +250,7 @@ def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
         cfile=combineOfx(ofx_list)
 
     # Confirm with user that they want to upload results to Money
-    if doit == 'I' or Debug:
+    if interactiveFlag == 'I' or Debug:
         gogo = input('Upload results to Money? (Y/N/V=Verify) [Y] ').upper()
         gogo = 'Y' if gogo=='' else gogo[:1]    #first letter
 
@@ -311,6 +311,55 @@ def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
         input("\n\nPress <Enter> to continue...")
 
 
+def input_default(prompt: str, default: object, type_cast: type=str) -> object:
+    """
+    Prompts the user for input with a default value.
+
+    When type_cast is set to bool, accepts Y/N, Yes/No, True/False, T/F, 1/0
+    (case-insensitive) as valid inputs.  In this case the default should be set to a user
+    friendly value (e.g. 'Y' or 'N') rather than a boolean value.
+
+    Args:
+        prompt (str): The prompt message to display to the user.
+        default (any): The default value to use if the user provides no input.
+        type_cast (type, optional): A function to cast the input to a specific type.
+            Defaults to str.
+
+    Returns:
+        The value entered by the user, cast to the specified type, or the default value
+        if no input is provided.
+    """
+
+    # Loop until valid(ish) input is received
+    user_input = ""
+    while not user_input:
+        try:
+            # Get the user input
+            user_input = input(f"{prompt} [{default}]: ")
+
+            # Process the special case of boolean input
+            if type_cast == bool:
+                user_input = str(default) if not user_input else user_input
+                if user_input.upper() in ['Y', 'YES', 'TRUE', 'T', '1']:
+                    user_input = True
+                elif user_input.upper() in ['N', 'NO', 'FALSE', 'F', '0']:
+                    user_input = False
+                else:
+                    raise ValueError("Invalid boolean input")
+                break
+
+            # Process all other types
+            else:
+                user_input = default if not type_cast(user_input) else user_input
+
+        except ValueError:
+            # Only error we expect is a ValueError from an invalid type cast, so we can
+            # catch that and prompt again
+            print(f"Invalid entry. Please enter a value of type {type_cast.__name__}.")
+
+    return user_input
+
+
 if __name__=="__main__":
 
     stat1 = True    #overall status flag across all operations (true == no errors getting data)
@@ -323,9 +372,10 @@ if __name__=="__main__":
         log.debug('httpsVerify ' + 'ON' if httpsVerify else 'OFF')
 
     if userdat.promptStart:
-        doit = input("Download transactions? (Y/N/I=Interactive) [Y] ").upper()
-        doit = 'Y' if doit=='' else doit[:1]  #first char
-    if doit in "YI":
+
+        interactiveFlag = input_default("Run in interactive mode? (Y/N)", 'Y', bool)
+
+    if True: #interactiveFlag:
         #get download interval, if promptInterval=Yes in sites.dat
         interval = userdat.defaultInterval
         if userdat.promptInterval:
@@ -338,8 +388,8 @@ if __name__=="__main__":
         #get account info
         #AcctArray = [['SiteName', 'Account#', 'AcctType', 'UserName', 'PassWord'], ...]
         pwkey, getquotes, AcctArray = get_cfg()
-        ofxList = []
         quoteFile1, quoteFile2, htmFileName = '','',''
+        #ToDo: userdat.fetchQuotes: = getquotes
 
         if len(AcctArray) > 0 and pwkey != '':
             #if accounts are encrypted... decrypt them
@@ -353,37 +403,57 @@ if __name__=="__main__":
 
         log.info("Default download interval= {0} days".format(interval))
 
-        #create process Queue in the right order
+        # Create process Queue in the right order
         Queue = ['Accts', 'importFiles']
         if userdat.savetickersfirst:
             Queue.insert(0,'Quotes')
         else:
             Queue.append('Quotes')
 
+        # Get and process files in the order defined in Queue
+        ofxList = []
+        
         for QEntry in Queue:
 
+            # Get OFX files for Direct Connect accounts
             if QEntry == 'Accts':
-                stat, newList = get_directconnect_ofx_files(AcctArray, interval)
-                ofxList.extend(newList)
-                stat1 = stat1 and stat
+                if (input_default(
+                    "\nDownload statements for all accounts? (Y/N)", 'Y', bool)
+                    if interactiveFlag else userdat.fetchRemote):
 
+                    log.info("\n--- Downloading statements for all accounts ---")
+                    stat, newList = get_directconnect_ofx_files(AcctArray, interval)
+                    ofxList.extend(newList)
+                    stat1 = stat1 and stat
+
+            # Get OFX files from import folder
             if QEntry == 'importFiles':
-                stat, newList = get_import_ofx_files()
-                ofxList.extend(newList)
-                stat1 = stat1 and stat
+                if (input_default(
+                    "\nProcess files in import folder? (Y/N)", 'Y', bool)
+                    if interactiveFlag else userdat.fetchImport):
 
-            #get stock/fund quotes
-            if QEntry == 'Quotes' and getquotes:
-                qstatus, quoteFile1, quoteFile2, htmFileName = quotes.getQuotes()
-                z = ['Stock/Fund Quotes','',quoteFile1]
-                stat1 = stat1 and qstatus
-                if glob.glob(quoteFile1) != []:
-                    ofxList.append(z)
-                else: quotesExist=False
-                print("")
+                    log.info("\n--- Processing OFX files in import folder ---")
+                    stat, newList = get_import_ofx_files()
+                    ofxList.extend(newList)
+                    stat1 = stat1 and stat
 
-                # display the HTML file after download if requested to always do so
-                if qstatus and userdat.showquotehtm: os.startfile(htmFileName)
+            # Get stock/fund quotes
+            if QEntry == 'Quotes':
+                if (input_default(
+                    "\nDownload stock/fund quotes? (Y/N)", 'Y', bool)
+                    if interactiveFlag else userdat.fetchQuotes):
+
+                    log.info("\n--- Downloading stock/fund quotes ---")
+                    qstatus, quoteFile1, quoteFile2, htmFileName = quotes.getQuotes()
+                    z = ['Stock/Fund Quotes','',quoteFile1]
+                    stat1 = stat1 and qstatus
+                    if glob.glob(quoteFile1) != []:
+                        ofxList.append(z)
+                    else: quotesExist=False
+                    print("")
+
+                    # display the HTML file after download if requested to always do so
+                    if qstatus and userdat.showquotehtm: os.startfile(htmFileName)
 
         if len(ofxList) > 0:
             log.info('Downloads completed.')
