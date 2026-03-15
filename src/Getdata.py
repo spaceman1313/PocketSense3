@@ -46,8 +46,8 @@
 
 
 # Define the required minimum Python version.  Make check compatible with Python 2 since
-# a lot of users are coming from 2.7.15.  Need to do this before any other imports to
-# prevent syntax errors on older versions.
+# a lot of users are coming from 2.7.15.  MUST do this before any other imports to
+# prevent syntax errors when run on older python versions.
 import sys
 REQUIRED_MAJOR = 3
 REQUIRED_MINOR = 11
@@ -64,25 +64,28 @@ if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
     raise RuntimeError(error_message) # Use RuntimeError for clarity to non-Python users
 
 # Now import modules as we normally would
-# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position, wildcard-import, unused-wildcard-import
 import os
 import glob
 import time
 import re
 
-import ofx_online, quotes, site_cfg, scrubber
+import ofx_online
+import quotes
+import site_cfg
+import scrubber
+
 from control2 import *
 from rlib1 import *
-# pylint: enable=wrong-import-position
+# pylint: enable=wrong-import-position, wildcard-import, unused-wildcard-import
 
-#startup
-print('')
+# Setup globals
 userdat = site_cfg.site_cfg()
 log = create_logger('root', 'getdata.log')
 if Debug:
     logging.basicConfig(level=logging.DEBUG)
     log.warning("**DEBUG Enabled: See Control2.py to disable.")
-    log.debug('xfrdir = %s' % xfrdir)
+    log.debug('xfrdir = %s', xfrdir)
 
 
 def get_site(ofx: str)  -> dict:
