@@ -1,22 +1,37 @@
-# PocketSense3
-Python3 implementation of PocketSense OFX handling scripts
+# *PocketSense3*
+Python3 implementation of *PocketSense* OFX handling scripts
 
 This is a Python3 implementation of the PocketSense scripts developed by Robert and found
 here:
 https://sites.google.com/site/pocketsense/home/msmoneyfixp1
 
-The initial 3.0.beta release is a pure translation of the original scripts.  My long term
-intent is to refactor and modularize some of the code to make it easier to implement
-additional changes.  In the development pipeline is the incorporation of other available
-CSV to OFX scripts.  This will allow users to continue using OFX functionality in
-Microsoft Money and other legacy accounting systems even as more banks discontinue the
-use of OFX.
+You are looking at the `Refactor-Modules` branch in GitHub.  In addition to having ported
+the scripts to Python 3, the `Getdata.py` main module has been substantially redone.
+`Getdata.py` is now PEP8 compliant and has numerous additional comments allowing the user
+to better understand what is going on.  In addition the main workflow now offers finer
+control (via interactive user input or `sites.dat` settings) to allow the user to control
+whether to:
+- Download OFX statements from direct connect servers (many of us no longer have any
+  financial institutions that support these)
+- Import OFX statements that have been downloaded via the web or created from CSV
+  files
+- Download quotes from Yahoo!
+- [COMING SOON] Process OFX files through the scrubbers
+- Automatically send the OFX file(s) to Microsoft Money
 
-Please be aware that as of December 2025, the only two banks to which I have access with
-DirectConnection are Fidelity and NetBenefits (which are really the same bank).  As such
-it is impossible for me to test many of the different permutations users may have.  I
-rely on you to provide me with feedback and bugs.  Please email me or enter a GitHub
-issue if you encounter a problem.
+My long term intent is to continue refactor and modularize some of the code to make it
+easier to implement additional changes as well as use modern debugging tools.  In the
+development pipeline is the incorporation of other available CSV to OFX scripts.  This
+will allow users to continue using OFX functionality in Microsoft Money and other legacy
+accounting systems even as more banks discontinue the use of OFX.
+
+**If you would like to try just the Python 3 port of the original scripts, without any
+of the new features, you should look at the `main` branch in the GitHub repository.**
+
+Please be aware that as of March 2026, the only bank to which I have access with
+DirectConnection is NetBenefits.  As such it is impossible for me to test many of the
+different permutations users may have.  I rely on you to provide me with feedback and
+bugs.  Please email me or enter a GitHub issue if you encounter a problem.
 
 I can be reached at pocketsense3 at the usual g email system.
 
@@ -26,16 +41,34 @@ only tested them with Python 3.14 (miniconda distribution).  You will also need 
 install the `requests` package in your Python installation.
 
 ### Installation:
-Follow the instructions in the original PocketSense website, but use Python 3.10 or
+Follow the instructions in the original PocketSense website, but use Python 3.11 or
 higher:
 https://sites.google.com/site/pocketsense/home/msmoneyfixp1/p2
 
 ### Transferring from PocketSense for Python 2:
 You should be able to copy your `sites.dat`, `connect.key`, and `ofx_config.cfg` files
 and use the new scripts without any issues. I strongly recommend you unencrypt your
-ofx_config.cfg file by running the PocketSense2 setup utility before encrypting it again
-in PocketSense3.  Be aware that PocketSense (both 2 and 3) use DES encryption.  Probably
-good enough for storing passwords on your own computer, but generally the DES algorithm
-is no longer considered the best for encrypting sensitive data. Please retain copies of
-your original configuration files. PocketSense3 will update the files with a format that
-is not backwards compatible.
+ofx_config.cfg file by running the *PocketSense2* setup utility before encrypting it
+again using the *PocketSense3* setup utility. Please retain copies of your original
+configuration files. *PocketSense3* will update the files with a format that is not
+backwards compatible.
+
+You should also take a look at the new settings in the `sites.template` file
+(`fetchRemote`, `fetchImport`, `fetchQuotes`, and `sendToMoney`) and copy those to your
+own `sites.dat` file. These settings enable finer control over what operations
+PocketSense3 carries out when running `getdata.py`.
+
+`Setup.py` can no longer be used to control the setting that enables/disables quote
+downloads.  That should now be done via the `fetchQuotes` setting in `sites.dat`.
+
+One final note.  `control2.py` has a new debug setting called `BlockSendToMoney`.  As its
+name implies, this setting will block sending the OFX file(s) to Microsoft Money at the
+very last step in the process, thus overriding the `sites.dat` setting `sendToMoney`.
+This setting is purposely set to True due to the beta nature of these scripts.  When you
+feel comfortable with this new version, set that setting to False to allow *PocketSense3*
+to work as intended.
+
+### A special note:
+Be aware that *PocketSense* (both 2 and 3) use DES encryption.  Probably good enough for
+storing passwords on your own computer, but generally the DES algorithm is no longer
+considered the best for encrypting sensitive data.
