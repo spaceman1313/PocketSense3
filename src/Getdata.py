@@ -1,48 +1,30 @@
-# GetData.py
-# http://sites.google.com/site/pocketsense/
-# retrieve statements, stock and fund data
-# Intial version: rlc: Feb-2010
+"""
+Getdata.py - Retrieve statements, stock, and fund data for PocketSense3
+This module provides functions to download, import, and process OFX files for financial
+accounts, as well as retrieve stock and fund quotes. It supports both interactive and
+automated modes, handles account decryption, manages file imports, and sends processed
+data to Microsoft Money. The module includes logic to prevent account lockouts, scrub
+imported files, combine OFX files, and prompt users for various actions. Logging is
+integrated for tracking operations and errors.
 
-# History
-# ---------
-# 11-Mar-2010*rlc
-#   - Added "interactive" mode
-#   - Download all statements and quotes before beginning upload to Money
-#   - Allow stock quotes to be sent to Money before statements (option defined in sites.dat)
-# 09-May-2010*rlc
-#   - Download files in the order that they will be sent to Money so that file timestamps are in the same order
-#   - Send data to Money using the os.system() call rather than os.startfile(), as this seems
-#     to help force the order when sending files to Money (FIFO)
-#   - Added logic to catch failed connections and server timeouts
-#   - Added "About" title and version to start
-# 05-Sep-2010*rlc
-#   - Updated to support spaces in SiteName values in sites.dat
-#   - Don't auto-close command window if any error is detected during download operations
-# 04-Jan-2011*rlc
-#   - Display quotes.htm after download if "ShowQuoteHTM: Yes" defined in sites.dat
-#   - Ask to display quotes.htm after download if "ShowQuoteHTM: Yes" defined in sites.dat (overrides ShowQuoteHTM)
-# 18-Jan-2011*rlc
-#   - Added 0.5 s delay between "file starts", which sends an OFX file to Money
-# 23Aug2012*rlc
-#   - Added user option to change default download interval at runtime
-#   - Added support for combineOFX
-# 28Aug2013*rlc
-#   - Added support for forceQuotes option
-# 21Oct2013*rlc
-#   - Modified forceQuote option to prompt for statement accept in Money before continuing
-# 25Feb2014*rlc
-#   - Bug fix for forceQuote option when the quote feature isn't being used
-# 14May2018*rlc
-#   - If an a connection fails for a specific user/pw combo, don't try other accounts during the session
-#     Added to help prevent accounts getting locked when a user changes their password, has multiple
-#     accounts at the institution, but forgot to update their account settings in Setup.
-#16Sep2019*rlc
-#   - Add support for ofx import from ./import subfolder.  any file present in ./import will be inspected,
-#     and if it looks like a valid OFX file, will be processed the same as a downloaded statement (scrubbed, etc.)
-#19Jun2023*rlc
-#   - add logging
-#14Dec2023*cgn
-#   - Update to python3
+Main Features:
+- Download OFX statements for Direct Connect accounts
+- Import and process OFX files from a designated import directory
+- Retrieve and process stock/fund quotes
+- Combine OFX files if configured
+- Send processed files to Microsoft Money
+- Interactive and non-interactive operation modes
+- Logging of all major actions and errors
+- Python version compatibility check
+
+Intended to be called directly from the command line or a batch file
+
+Pocketsene scripts originally by Robert:
+http://sites.google.com/site/pocketsense/
+
+This is an updated version ported to Python3 and modified to better comply with Python
+best practices and make future expandability easier.
+"""
 
 
 # Define the required minimum Python version.  Make check compatible with Python 2 since
@@ -61,7 +43,7 @@ if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
         % (REQUIRED_MAJOR, REQUIRED_MINOR, sys.version_info[0], sys.version_info[1])
         )
     # pylint: enable=consider-using-f-string
-    raise RuntimeError(error_message) # Use RuntimeError for clarity to non-Python users
+    raise RuntimeError(error_message)  # Use RuntimeError for clarity to non-Python users
 
 # Now import modules as we normally would
 # pylint: disable=wrong-import-position, wildcard-import, unused-wildcard-import
@@ -88,11 +70,11 @@ if Debug:
     log.debug('xfrdir = %s', xfrdir)
 
 
-def get_site(ofx: str)  -> dict:
+def get_site(ofx: str) -> dict:
     """
     Returns the site configuration entry for an OFX file.
 
-    Returns the appropirate site configuration entry for an OFX file based on the FID and
+    Returns the appropriate site configuration entry for an OFX file based on the FID and
     BANKID values found in the OFX file.  If a matching site is not found, returns the
     first site entry in sites.dat as a default.
 
@@ -105,10 +87,10 @@ def get_site(ofx: str)  -> dict:
 
     # Get <FID> and <BANKID> values from OFX file, if they exist
     site = {}
-    p = re.compile(r'<FID>(.*?)[<\s]',re.IGNORECASE | re.DOTALL)
+    p = re.compile(r'<FID>(.*?)[<\s]', re.IGNORECASE | re.DOTALL)
     r = p.search(ofx)
     fid = r.groups()[0] if r else 'undefined'
-    p = re.compile(r'<BANKID>(.*?)[<\s]',re.IGNORECASE | re.DOTALL)
+    p = re.compile(r'<BANKID>(.*?)[<\s]', re.IGNORECASE | re.DOTALL)
     r = p.search(ofx)
     bankid = r.groups()[0] if r else 'undefined'
 
@@ -118,7 +100,7 @@ def get_site(ofx: str)  -> dict:
     if fid or bankid:
         for key, value in sites.items():
             if not site:
-                site=value   #defaults to first site found
+                site = value   # defaults to first site found
 
             if FieldVal(value, 'fid') == fid or FieldVal(value, 'bankid') == bankid:
                 site = value
@@ -178,14 +160,14 @@ def get_directconnect_ofx_files(acct_array: list) -> tuple[bool, list]:
     if userdat.promptInterval:
         try:
             p = int2(input("Download interval (days) [" + str(dl_interval) + "]: "))
-            if p>0:
+            if p > 0:
                 dl_interval = p
             else:
                 raise ValueError("Download interval must be a positive integer.")
         except ValueError:
             log.info("Invalid entry. Using defaultInterval=%s", dl_interval)
 
-    log.info("ownload interval= %s days", dl_interval)
+    log.info("Download interval= %s days", dl_interval)
 
     # Verify that account info exists
     if len(acct_array) == 0:
@@ -244,7 +226,7 @@ def get_import_ofx_files() -> tuple[bool, list]:
 
         # Get the parts of the filename
         fname = os.path.basename(f)             # full base filename.extension
-        bext  = os.path.splitext(fname)[1]      # file extension
+        bext = os.path.splitext(fname)[1]       # file extension
 
         # Read the file
         with open(f) as ifile:
@@ -276,7 +258,7 @@ def get_import_ofx_files() -> tuple[bool, list]:
             account_id = get_acctid(ofx2)
 
             # Preserve original file type but save w/ ofx extension and move to xfrdir
-            outname = xfrdir+fname + ('' if bext=='.ofx' else '.ofx')
+            outname = xfrdir+fname + ('' if bext == '.ofx' else '.ofx')
             os.rename(f, outname)
             ofx_list.append(['import file', account_id, outname])
             log.info('%s saved to %s', fname, outname)
@@ -293,7 +275,7 @@ def send_files_to_money(ofx_list: list, quote_file_forced: str, interactive_flag
     before sending.
 
     Args:
-        ofx_list (list): List containting all OFX files to send to Money.
+        ofx_list (list): List containing all OFX files to send to Money.
         quote_file_forced (str): Downloaded ForceQuotes OFX file.
         interactive_flag (bool): Flag indicating whether to prompt the user for
             interactive input.
@@ -324,7 +306,7 @@ def send_files_to_money(ofx_list: list, quote_file_forced: str, interactive_flag
             if glob.glob(quote_file_forced):
                 if Debug:
                     log.debug("Importing ForceQuotes statement: %s", quote_file_forced)
-                run_file(quote_file_forced)  #force transactions for MoneyUK
+                run_file(quote_file_forced)  # Force transactions for MoneyUK
                 input(
                     "ForceQuote statement loaded.  Accept in Money and press <Enter> "
                     "to continue."
@@ -359,7 +341,7 @@ def send_files_to_money(ofx_list: list, quote_file_forced: str, interactive_flag
             log.info('Invalid selection.  Results not sent to Money.')
 
 
-def input_default(prompt: str, default: object, type_cast: type=str) -> object:
+def input_default(prompt: str, default: object, type_cast: type = str) -> object:
     """
     Prompts the user for input with a default value.
 
@@ -426,11 +408,11 @@ def main():
     #ToDo: userdat.fetchQuotes: = getquotes
 
     if len(acct_array) > 0 and pwkey != '':
-        #if accounts are encrypted... decrypt them
-        pwkey=decrypt_pw(pwkey)
+        # if accounts are encrypted... decrypt them
+        pwkey = decrypt_pw(pwkey)
         acct_array = acctDecrypt(acct_array, pwkey)
 
-    #delete old data files
+    # delete old data files
     ofxfiles = xfrdir+'*.ofx'
     if glob.glob(ofxfiles):
         os.system("del "+ofxfiles)
@@ -496,7 +478,7 @@ def main():
                 quote_status, quote_file, quote_file_forced, html_quote_file = (
                     quotes.getQuotes())
                 if quote_status:
-                    new_list = ['Stock/Fund Quotes','',quote_file]
+                    new_list = ['Stock/Fund Quotes', '', quote_file]
                     ofx_list.append(new_list)
                 status = status and quote_status
 
@@ -527,7 +509,7 @@ def main():
 
         log.debug("Full quotes file name: %s", html_quote_file)
         log.info("Opening %s in browser.", htm_filename_root)
-        os.startfile(html_quote_file)  #don't wait for browser close
+        os.startfile(html_quote_file)  # don't wait for browser close
 
     # Keep window open if needed, complete execution
     if not status:
@@ -544,5 +526,5 @@ def main():
         '-----------------------------------------------------------------------------')
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
