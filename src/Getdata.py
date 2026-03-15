@@ -85,31 +85,45 @@ if Debug:
     log.debug('xfrdir = %s' % xfrdir)
 
 
-def getSite(ofx: str):
+def get_site(ofx: str)  -> dict:
+    """
+    Returns the site configuration entry for an OFX file.
 
-    # find matching site entry for ofx
-    # matches on FID or BANKID value found in ofx and in sites list
+    Returns the appropirate site configuration entry for an OFX file based on the FID and
+    BANKID values found in the OFX file.  If a matching site is not found, returns the
+    first site entry in sites.dat as a default.
 
-    #get fid value from ofx
-    site = None
+    Args:
+        ofx (str): OFX file content as a string.
+
+    Returns:
+        A dict containing the site configuration entry.
+    """
+
+    # Get <FID> and <BANKID> values from OFX file, if they exist
+    site = {}
     p = re.compile(r'<FID>(.*?)[<\s]',re.IGNORECASE | re.DOTALL)
     r = p.search(ofx)
     fid = r.groups()[0] if r else 'undefined'
     p = re.compile(r'<BANKID>(.*?)[<\s]',re.IGNORECASE | re.DOTALL)
     r = p.search(ofx)
     bankid = r.groups()[0] if r else 'undefined'
+
+    # Try to find a matching site entry based on FID or BANKID.  If a match isn't found,
+    # site will be set to the first entry in sites.dat
     sites = userdat.sites
     if fid or bankid:
-        for s in sites:
-            if not site: site=sites[s]   #defaults to first site found, if matching fid/bankid not found
-            thisFid    = FieldVal(sites[s], 'fid')
-            thisBankid = FieldVal(sites[s], 'bankid')
-            if thisFid == fid or thisBankid == bankid:
-                site = sites[s]
-                log.info('Matched import file to site *%s*' % s)
+        for key, value in sites.items():
+            if not site:
+                site=value   #defaults to first site found
+
+            if FieldVal(value, 'fid') == fid or FieldVal(value, 'bankid') == bankid:
+                site = value
+                log.info('Matched import file to site *%s*', key)
                 break
 
     return site
+
 
 def get_acctid(ofx: str) -> str:
     """
@@ -240,7 +254,7 @@ def get_import_ofx_files() -> tuple[bool, list]:
             # Scrub file if it hasn't already been imported (and hence, scrubbed)
             if 'NEWFILEUID:PSIMPORT' not in dat[:200]:
                 try:
-                    site = getSite(dat)
+                    site = get_site(dat)
                     scrubber.scrub(f, site)
                 except re.error:
                     log.info("No site defined for %s in sites.dat: skipping scrub "
