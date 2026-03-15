@@ -226,8 +226,7 @@ def get_import_ofx_files() -> tuple[bool, list]:
     return result, ofx_list
 
 
-def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
-                         htm_filename: str):
+def send_files_to_money(ofx_list: list, quote_file2: str):
     """
     Sends all OFX files to Microsoft Money.
 
@@ -237,13 +236,13 @@ def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
 
     Args:
         ofx_list (list): List containting all OFX files to send to Money.
-        quotes_exist (bool): Was a quotes file downloaded. TODO: currently not set.
         quote_file2 (str): Downloaded ForceQuotes OFX file.
-        htm_filename (str): Name of the quotes HTML file.
     """
 
     gogo = 'Y'
     cfile = ""
+    quotes_exist = True
+    htm_filename = ""
 
     # Combine OFX files if option set
     if userdat.combineofx and len(ofx_list) > 1:
@@ -300,15 +299,15 @@ def send_files_to_money(ofx_list: list, quotes_exist: bool, quote_file2: str,
 
     # Ask to show quotes.htm if defined in sites.dat (need to deal with showquotehtm
     # option)
-    if userdat.askquotehtm and quotes_exist:
-        ask = input("Open <Quotes.htm> in the default browser? (y/n) [n]").upper()
-        if ask=='Y':
-            log.debug("Opening <Quotes.htm> in broswer per user request.")
-            os.startfile(htm_filename)  #don't wait for browser close
+    # if userdat.askquotehtm and quotes_exist:
+    #     ask = input("Open <Quotes.htm> in the default browser? (y/n) [n]").upper()
+    #     if ask=='Y':
+    #         log.debug("Opening <Quotes.htm> in broswer per user request.")
+    #         os.startfile(htm_filename)  #don't wait for browser close
 
-    # Keep window/screen open at end until user confirms
-    if userdat.promptEnd:
-        input("\n\nPress <Enter> to continue...")
+    # # Keep window/screen open at end until user confirms
+    # if userdat.promptEnd:
+    #     input("\n\nPress <Enter> to continue...")
 
 
 def input_default(prompt: str, default: object, type_cast: type=str) -> object:
@@ -362,8 +361,7 @@ def input_default(prompt: str, default: object, type_cast: type=str) -> object:
 
 if __name__=="__main__":
 
-    stat1 = True    #overall status flag across all operations (true == no errors getting data)
-    quotesExist = False
+
     print('')
     log.info(AboutTitle + ", Ver: " + AboutVersion)
 
@@ -371,6 +369,7 @@ if __name__=="__main__":
         httpsVerify = False if os.environ.get('PYTHONHTTPSVERIFY','')=='0' else True
         log.debug('httpsVerify ' + 'ON' if httpsVerify else 'OFF')
 
+    interactiveFlag = False
     if userdat.promptStart:
 
         interactiveFlag = input_default("Run in interactive mode? (Y/N)", 'Y', bool)
@@ -411,20 +410,23 @@ if __name__=="__main__":
             Queue.append('Quotes')
 
         # Get and process files in the order defined in Queue
-        ofxList = []
-        
+        status = True   # Overall status across all operations
+                        # True if all operations are succesful
+        ofxList = []    # List of all OFX files to send to Money.
+                        # Each item is a list: [SiteName, Account#, OFX filename]
+
         for QEntry in Queue:
 
             # Get OFX files for Direct Connect accounts
             if QEntry == 'Accts':
                 if (input_default(
-                    "\nDownload statements for all accounts? (Y/N)", 'Y', bool)
+                    "\nDownload statements for all online accounts? (Y/N)", 'Y', bool)
                     if interactiveFlag else userdat.fetchRemote):
 
                     log.info("\n--- Downloading statements for all accounts ---")
-                    stat, newList = get_directconnect_ofx_files(AcctArray, interval)
+                    acctsStatus, newList = get_directconnect_ofx_files(AcctArray, interval)
                     ofxList.extend(newList)
-                    stat1 = stat1 and stat
+                    status = status and acctsStatus
 
             # Get OFX files from import folder
             if QEntry == 'importFiles':
@@ -432,10 +434,11 @@ if __name__=="__main__":
                     "\nProcess files in import folder? (Y/N)", 'Y', bool)
                     if interactiveFlag else userdat.fetchImport):
 
-                    log.info("\n--- Processing OFX files in import folder ---")
-                    stat, newList = get_import_ofx_files()
+                    print("")
+                    log.info("--- Processing OFX files in import folder ---")
+                    importStatus, newList = get_import_ofx_files()
                     ofxList.extend(newList)
-                    stat1 = stat1 and stat
+                    status = status and importStatus
 
             # Get stock/fund quotes
             if QEntry == 'Quotes':
@@ -443,32 +446,56 @@ if __name__=="__main__":
                     "\nDownload stock/fund quotes? (Y/N)", 'Y', bool)
                     if interactiveFlag else userdat.fetchQuotes):
 
-                    log.info("\n--- Downloading stock/fund quotes ---")
-                    qstatus, quoteFile1, quoteFile2, htmFileName = quotes.getQuotes()
-                    z = ['Stock/Fund Quotes','',quoteFile1]
-                    stat1 = stat1 and qstatus
-                    if glob.glob(quoteFile1) != []:
-                        ofxList.append(z)
-                    else: quotesExist=False
                     print("")
+                    log.info("--- Downloading stock/fund quotes ---")
+                    quoteStatus, quoteFile1, quoteFile2, htmFileName = quotes.getQuotes()
+                    if quoteStatus:
+                        newList = ['Stock/Fund Quotes','',quoteFile1]
+                        ofxList.append(newList)
+                    status = status and quoteStatus
 
-                    # display the HTML file after download if requested to always do so
-                    if qstatus and userdat.showquotehtm: os.startfile(htmFileName)
+        print("")
+        log.info('--- OFX file fetching completed. ---')
 
+        # Process all OFX files and send to Money.
         if len(ofxList) > 0:
-            log.info('Downloads completed.')
-            # TODO: quotesExist is never set to True...fix this
-            send_files_to_money( ofxList, quotesExist, quoteFile2, htmFileName)
+
+            # pass the interactive flag and let sendfiles handle further user query
+            if (input_default(
+                "\nSend Results to Money? (Y/N)", 'Y', bool)
+                if interactiveFlag else userdat.sendToMoney):
+
+                send_files_to_money(ofxList, quoteFile2)
 
         else:
-            if len(AcctArray)>0 or (getquotes and len(userdat.stocks)>0):
-                log.warning("No files were downloaded. Verify network connection and try again later.")
-            input("Press <Enter> to continue...")
+            logMessage = (
+                "No OFX files were fetched or created. Verify network connection "
+                "and input folders.")
+            log.warning(logMessage)
 
-        if Debug:
-            input("Press <Enter> to continue...")
-        elif not stat1:
-            log.warn( "One or more accounts (or quotes) may not have downloaded correctly.")
-            input("Review and press <Enter> to continue...")
+            # Set status to False to prevent auto-close of command window
+            status = False
 
-    log.info('-----------------------------------------------------------------------------------')
+        # Display quotes.htm if downloaded and user wants to see it.
+        htm_filename_root = os.path.basename(htmFileName) if htmFileName else ""
+
+        if htmFileName and (input_default(
+            f"\nOpen <{htm_filename_root}> in the default browser? (Y/N)", 'Y', bool)
+            if (interactiveFlag or userdat.askquotehtm) else userdat.showquotehtm):
+
+            log.debug("Full quotes file name: %s", htmFileName)
+            log.info("Opening %s in broswer.", htm_filename_root)
+            os.startfile(htmFileName)  #don't wait for browser close
+
+        # Keep window open if needed, complete execution
+        if not status:
+            logMessage = (
+                "One or more errors were detected during the download process. "
+                "Review display and log to identify the problem.")
+            log.warning(logMessage)
+
+        if Debug or interactiveFlag or userdat.promptEnd or not status:
+            input("\nPress <Enter> to close the window...")
+
+    log.info(
+        '-----------------------------------------------------------------------------')

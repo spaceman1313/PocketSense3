@@ -119,6 +119,7 @@ class site_cfg:
         self.fetchRemote = False
         self.fetchImport = True
         self.fetchQuotes = True
+        self.sendToMoney = True
 
         if glob.glob(self.datfile) == []:
             if glob.glob(self.bakfile) != []:
