@@ -255,6 +255,7 @@ class OFXClient:
             #   set PYTHONHTTPSVERIFY=0
             #   set HTTPSPROXY="https://127.0.0.1:8888"
             httpsVerify = False if os.environ.get('PYTHONHTTPSVERIFY','')=='0' else True
+            log.debug('httpsVerify ' + 'ON' if httpsVerify else 'OFF')
             header = collections.OrderedDict()
             header['Content-Type'] = 'application/x-ofx'
             header['Host']         = self.urlHost
@@ -347,7 +348,7 @@ def get_dc_OFX(account, interval):
     ofxFileName = xfrdir + sitename + dtnow + ofxFileSuffix
 
     msg = "Unknown error occurred while processing OFX request for site: " + sitename
-    
+
     try:
         if acct_num == '':
             query = client.acctQuery()
