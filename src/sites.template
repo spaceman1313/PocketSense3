@@ -56,8 +56,13 @@ CombineOFX: No              #Combine ofx files before sending to Money
 skipFailedLogon: Yes        #If a connection to a site fails during Getdata, no further connections
                             #will be attempted for that site+username combo during the session.
                             #default = Yes
-promptStart: Yes			#prompt/pause to continue when starting getData
-promptEnd  : No				#prompt/pause to continue when getData is finished
+promptStart: Yes            #Ask whether to run getData in interactive mode
+promptEnd  : No             #Prompt/pause to continue when getData is finished
+fetchRemote: Yes            #fetch and process OXF files from DirectConnect servers
+                            #You must run setup.py to setup all your remote accounts
+fetchImport: Yes            #Fetch and process files from the Imports folder
+fetchQuotes: Yes            #Fetch quotes from Yahoo (see settings below)
+sendToMoney: Yes            #Whether to send OFX files to Money by default
 
 #--------------------------------------------------------------------------------
 #SITE LIST (example for each type)

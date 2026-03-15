@@ -432,7 +432,7 @@ def float2(str):
 
 def run_file(filename):
 
-    if SendtoMoney:
+    if not BlockSendToMoney:
         #encapsulate call to os.system in quotes
         os.system('"'+filename+'"')
     else:

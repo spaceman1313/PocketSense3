@@ -276,6 +276,18 @@ class site_cfg:
                     if field == 'PROMPTEND':
                         self.promptEnd = (value[:1].upper() == 'Y')
 
+                    if field == 'FETCHREMOTE':
+                        self.fetchRemote = (value[:1].upper() == 'Y')
+
+                    if field == 'FETCHIMPORT':
+                        self.fetchImport = (value[:1].upper() == 'Y')
+
+                    if field == 'FETCHQUOTES':
+                        self.fetchQuotes = (value[:1].upper() == 'Y')
+
+                    if field == 'SENDTOMONEY':
+                        self.sendToMoney = (value[:1].upper() == 'Y')
+
            #end_for line
 
         f.close()
