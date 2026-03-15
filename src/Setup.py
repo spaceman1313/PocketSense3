@@ -310,18 +310,13 @@ if __name__=="__main__":
             menu_4 = '4. Change Password'
             menu_5 = '5. Remove Encryption'
 
-        if c_getquotes:
-            menu_6 = ('6. Disable Stock/Fund Quotes')
-        else:
-            menu_6 = ('6. Enable Stock/Fund Quotes')
-
         separator_line('Main Menu', 1)
         print("1. Add or Modify Account")
         print("2. List Accounts")
         print("3. Delete Account (or reset connection)")
         print(menu_4)
         print(menu_5)
-        print(menu_6)
+        print("6. Test Stock/Fund Quote Downloads")
         print("7. Test Account")
         print("8. About")
         print("0. Save & Exit")
@@ -391,7 +386,7 @@ if __name__=="__main__":
 
         elif menu_option == 6:
             #enable/disable stock quotes
-            c_getquotes = not c_getquotes
+            c_getquotes = True
             if c_getquotes:
                 doit = (input('Do you want to test Quote downloads? (Y/N)? ').upper() == 'Y')
                 if doit:

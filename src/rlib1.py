@@ -185,7 +185,7 @@ def get_cfg():
 
     c_AcctArray = []        #AcctArray = [['SiteName', 'Account#', 'AcctType', 'UserName', 'PassWord'], ...]
     c_pwkey=''              #default = no encryption
-    c_getquotes = False     #default = no quotes
+    c_getquotes = True     #default = no quotes
     if glob.glob(cfgFile) != []:
         cfg = open(cfgFile,'rb')
         try:

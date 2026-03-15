@@ -405,8 +405,7 @@ def main():
 
     # Get account info
     # acct_array = [['SiteName', 'Account#', 'AcctType', 'UserName', 'PassWord'], ...]
-    pwkey, getquotes, acct_array = get_cfg()
-    #ToDo: userdat.fetchQuotes: = getquotes
+    pwkey, _, acct_array = get_cfg()
 
     if len(acct_array) > 0 and pwkey != '':
         # if accounts are encrypted... decrypt them
