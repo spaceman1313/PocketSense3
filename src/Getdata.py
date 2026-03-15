@@ -24,6 +24,7 @@ http://sites.google.com/site/pocketsense/
 
 This is an updated version ported to Python3 and modified to better comply with Python
 best practices and make future expandability easier.
+https://github.com/spaceman1313/PocketSense3
 """
 
 
