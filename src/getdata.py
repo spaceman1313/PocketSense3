@@ -44,7 +44,7 @@ if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
         % (REQUIRED_MAJOR, REQUIRED_MINOR, sys.version_info[0], sys.version_info[1])
         )
     # pylint: enable=consider-using-f-string
-     # Use RuntimeError for clarity to non-Python users
+    # Use RuntimeError for clarity to non-Python users
     raise RuntimeError(error_message)
 
 # Now import modules as we normally would
@@ -157,7 +157,7 @@ def get_directconnect_ofx_files(acct_array: list) -> tuple[bool, list]:
             - bool: Overall status of the download operations.
             - list: List of downloaded OFX files.
     """
-    #get download interval, if promptInterval=Yes in sites.dat
+    # Get download interval, if promptInterval=Yes in sites.dat
     # should move into get ofx function
     dl_interval = userdat.defaultInterval
     if userdat.promptInterval:
@@ -283,14 +283,14 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
             # Don't send to Scrub.
             log.info("OFX files not scrubbed (user selection or sites.dat setting).")
             log.info("Warning not scrubbing files may result in errors when "
-                        "importing into MS Money.")
+                     "importing into MS Money.")
 
         case 'Y' | 'C':
             # Let's scrub them.
 
             if userin == 'C':
                 log.info("Warning not scrubbing files may result in errors when "
-                            "importing into MS Money.")
+                         "importing into MS Money.")
 
             for entry in ofx_list:
 
