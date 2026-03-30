@@ -116,9 +116,10 @@ class site_cfg:
         self.skipFailedLogon = True
         self.promptStart = True
         self.promptEnd   = False
-        self.fetchRemote = False
+        self.fetchRemote = True
         self.fetchImport = True
         self.fetchQuotes = True
+        self.scrubOfx  = True
         self.sendToMoney = True
 
         if glob.glob(self.datfile) == []:
@@ -284,6 +285,9 @@ class site_cfg:
 
                     if field == 'FETCHQUOTES':
                         self.fetchQuotes = (value[:1].upper() == 'Y')
+
+                    if field == 'SCRUBOFX':
+                        self.scrubOfx = (value[:1].upper() == 'Y')
 
                     if field == 'SENDTOMONEY':
                         self.sendToMoney = (value[:1].upper() == 'Y')

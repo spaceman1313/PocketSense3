@@ -44,7 +44,8 @@ if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
         % (REQUIRED_MAJOR, REQUIRED_MINOR, sys.version_info[0], sys.version_info[1])
         )
     # pylint: enable=consider-using-f-string
-    raise RuntimeError(error_message)  # Use RuntimeError for clarity to non-Python users
+     # Use RuntimeError for clarity to non-Python users
+    raise RuntimeError(error_message)
 
 # Now import modules as we normally would
 # pylint: disable=wrong-import-position, wildcard-import, unused-wildcard-import
@@ -71,20 +72,21 @@ if Debug:
     log.debug('xfrdir = %s', xfrdir)
 
 
-def get_site(ofx: str) -> dict:
+def get_site(ofx: str) -> str:
     """
     Returns the site configuration entry for an OFX file.
 
-    Returns the appropriate site configuration entry for an OFX file based on the FID and
-    BANKID values found in the OFX file.  If a matching site is not found, returns the
-    first site entry in sites.dat as a default.
+    Returns the appropriate site configuration entry for an OFX file based on the FID
+    and BANKID values found in the OFX file.  If a matching site is not found, returns
+    the first site entry in sites.dat as a default.
 
     Args:
         ofx (str): OFX file content as a string.
 
     Returns:
-        A dict containing the site configuration entry.
+        A string containing the site configuration entry name.
     """
+    #ToDo: Deak with empty bankid and fid in file
 
     # Get <FID> and <BANKID> values from OFX file, if they exist
     site = {}
@@ -97,14 +99,15 @@ def get_site(ofx: str) -> dict:
 
     # Try to find a matching site entry based on FID or BANKID.  If a match isn't found,
     # site will be set to the first entry in sites.dat
+    site = ""
     sites = userdat.sites
     if fid or bankid:
         for key, value in sites.items():
-            if not site:
-                site = value   # defaults to first site found
+            #if not site:
+            #    site = value   # defaults to first site found
 
             if FieldVal(value, 'fid') == fid or FieldVal(value, 'bankid') == bankid:
-                site = value
+                site = key
                 log.info('Matched import file to site *%s*', key)
                 break
 
@@ -190,7 +193,7 @@ def get_directconnect_ofx_files(acct_array: list) -> tuple[bool, list]:
             status, ofx_file = ofx_online.get_dc_OFX(acct, dl_interval)
             if status:
                 # Add account and OFX file to output list
-                ofx_list.append([acct[0], acct[1], ofx_file])
+                ofx_list.append([acct[0], acct[1], ofx_file, "DirectConnect"])
             else:
                 if userdat.skipFailedLogon:
                     # Log and skip any further attempts for this site/user combo
@@ -237,34 +240,107 @@ def get_import_ofx_files() -> tuple[bool, list]:
         if validOFX(dat) == '':
             log.info("Importing %s", fname)
 
-            # Scrub file if it hasn't already been imported (and hence, scrubbed)
-            if 'NEWFILEUID:PSIMPORT' not in dat[:200]:
-                try:
-                    site = get_site(dat)
-                    scrubber.scrub(f, site)
-                except re.error:
-                    log.info("No site defined for %s in sites.dat: skipping scrub "
-                             "routines",  fname)
+            # Try to match file to an entry in sites.dat
+            site = get_site(dat)
 
-            # Set NEWFILEUID:PSIMPORT to flag the file as having already been imported
-            # Don't want to accidentally scrub twice
-            with open(f, 'r', encoding='utf-8') as ifile:
-                ofx = ifile.read()
-            pattern = re.compile(r'NEWFILEUID:.*')
-            ofx2 = pattern.sub('NEWFILEUID:PSIMPORT', ofx)
-            if ofx2:
-                with open(f, 'w') as ofile:
-                    ofile.write(ofx2)
-
-            account_id = get_acctid(ofx2)
+            # Get the account ID
+            account_id = get_acctid(dat)
 
             # Preserve original file type but save w/ ofx extension and move to xfrdir
             outname = xfrdir+fname + ('' if bext == '.ofx' else '.ofx')
             os.rename(f, outname)
-            ofx_list.append(['import file', account_id, outname])
+            ofx_list.append([site, account_id, outname, "ImportFile"])
             log.info('%s saved to %s', fname, outname)
 
     return result, ofx_list
+
+
+def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
+    """
+    Scrubs all OFX filex that have been collected.
+
+    Runs the scrubber routine on each OFX file that has beren collected.  Option is
+    given for the user to scrub one at a time, provided the interactive flag is set.
+
+    Args:
+        ofx_list (list): List containing all OFX files to send to Money.
+        interactive_flag (bool): Flag indicating whether to prompt the user for
+            interactive input.
+    """
+
+    # Scrub each entry in the list of files.
+    # ToDo: Do quotes files break and do we need to set them aside
+    # ToDo: How to handle when there is no matching sites.dat file
+
+    # Determine if user wants to scrub all files, and if so, whether they want
+    # to confirm each file before scrubbing.
+    defval = 'Y' if userdat.scrubOfx else 'N'
+    if interactive_flag:
+        userin = str(
+            input_default("\nScrub OFX files? (y/n/c=confirm)", defval.lower(), str)
+        )[:1].upper()
+    else:
+        userin = defval
+
+    # Proceed acccording to user selection.
+    match userin:
+        case 'N':
+            # Don't send to Scrub.
+            log.info("OFX files not scrubbed (user selection or sites.dat setting).")
+            log.info("Warning not scrubbing files may result in errors when "
+                        "importing into MS Money.")
+
+        case 'Y' | 'C':
+            # Let's scrub them.
+
+            if userin == 'C':
+                log.info("Warning not scrubbing files may result in errors when "
+                            "importing into MS Money.")
+
+            for entry in ofx_list:
+
+                filename = entry[2]
+
+                # Check whether to send each file if user selected 'C'.
+                if not (
+                    input_default(f"Scrub file {filename}? (y/n)", 'y', bool)
+                    if userin == 'C' else True
+                ):
+                    break
+
+                if not entry[0]:
+                    # Don't run scrubbers if we don't have a site match.
+                    print (
+                        f" {entry[0]} not matched to a site in sites.dat. Scrubber"
+                         " not run."
+                        )
+                    continue
+
+                if entry[0] == "Stock/Fund Quotes":
+                    # Don't run scrubbers on quote files, they break them.
+                    continue
+
+                with open(filename, 'r', encoding='utf-8') as ifile:
+                    ofx = ifile.read()
+
+                    # ToDo: Move this check and set flag into scrubbers. Check to see if
+                    # file has been scrubbed already, and if not scrub it.
+                    if 'NEWFILEUID:PSIMPORT' not in ofx[:200]:
+                        try:
+                            scrubber.scrub(filename, userdat.sites[entry[0]])
+                        except re.error:
+                            log.info("Error running scrubbers on %s",  filename)
+
+                # Set NEWFILEUID:PSIMPORT to flag the file as having already been
+                # imported. Don't want to accidentally scrub twice
+                with open(filename, 'r', encoding='utf-8') as ifile:
+                    ofx = ifile.read()
+
+                pattern = re.compile(r'NEWFILEUID:.*')
+                ofx2 = pattern.sub('NEWFILEUID:PSIMPORT', ofx)
+                if ofx2:
+                    with open(filename, 'w') as ofile:
+                        ofile.write(ofx2)
 
 
 def send_files_to_money(ofx_list: list, quote_file_forced: str, interactive_flag: bool):
@@ -347,13 +423,13 @@ def input_default(prompt: str, default: object, type_cast: type = str) -> object
     Prompts the user for input with a default value.
 
     When type_cast is set to bool, accepts Y/N, Yes/No, True/False, T/F, 1/0
-    (case-insensitive) as valid inputs.  In this case the default should be set to a user
-    friendly value (e.g. 'Y' or 'N') rather than a boolean value.
+    (case-insensitive) as valid inputs.  In this case the default should be set to a
+    user friendly value (e.g. 'Y' or 'N') rather than a boolean value.
 
     Args:
-        prompt (str): The prompt message to display to the user.
-        default (any): The default value to use if the user provides no input.
-        type_cast (type, optional): A function to cast the input to a specific type.
+        prompt (str): The prompt message to display to the user. default (any): The
+        default value to use if the user provides no input. type_cast (type, optional):
+        A function to cast the input to a specific type.
             Defaults to str.
 
     Returns:
@@ -478,16 +554,21 @@ def main():
                 quote_status, quote_file, quote_file_forced, html_quote_file = (
                     quotes.getQuotes())
                 if quote_status:
-                    new_list = ['Stock/Fund Quotes', '', quote_file]
+                    new_list = ['Stock/Fund Quotes', '', quote_file, "Quote"]
                     ofx_list.append(new_list)
                 status = status and quote_status
 
-    print("")
-    log.info('--- OFX file fetching completed. ---')
-
-    # Process all OFX files and send to Money.
+    # Scrub all OFX files and send to Money.
     if len(ofx_list) > 0:
-        # Send to money, the interactive prompts get dealt with inside the function
+
+        # Scrub ofx files, the interactive prompts get dealt inside the function.
+        print("")
+        log.info('--- Scrubbing files ---')
+        scrub_files(ofx_list, interactive_flag)
+
+        # Send to money, the interactive prompts get dealt with inside the function.
+        print("")
+        log.info('--- Sending files to MS Money ---')
         send_files_to_money(ofx_list, quote_file_forced, interactive_flag)
 
     else:

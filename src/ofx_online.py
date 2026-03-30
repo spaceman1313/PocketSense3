@@ -404,7 +404,8 @@ def get_dc_OFX(account, interval):
                 raise Exception(msg)
 
             #cleanup the file if needed
-            scrubber.scrub(ofxFileName, site)
+            # Scrubbing moved to getdata
+            #scrubber.scrub(ofxFileName, site)
 
     except Exception as e:
         status = False

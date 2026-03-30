@@ -62,6 +62,7 @@ fetchRemote: Yes            #fetch and process OXF files from DirectConnect serv
                             #You must run setup.py to setup all your remote accounts
 fetchImport: Yes            #Fetch and process files from the Imports folder
 fetchQuotes: Yes            #Fetch quotes from Yahoo (see settings below)
+scrubOFX: Yes               #Scrub all OFX files before sending to money
 sendToMoney: Yes            #Whether to send OFX files to Money by default
 
 #--------------------------------------------------------------------------------
