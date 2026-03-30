@@ -86,7 +86,6 @@ def get_site(ofx: str) -> str:
     Returns:
         A string containing the site configuration entry name.
     """
-    #ToDo: Deak with empty bankid and fid in file
 
     # Get <FID> and <BANKID> values from OFX file, if they exist
     site = {}
@@ -268,10 +267,6 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
             interactive input.
     """
 
-    # Scrub each entry in the list of files.
-    # ToDo: Do quotes files break and do we need to set them aside
-    # ToDo: How to handle when there is no matching sites.dat file
-
     # Determine if user wants to scrub all files, and if so, whether they want
     # to confirm each file before scrubbing.
     defval = 'Y' if userdat.scrubOfx else 'N'
@@ -299,7 +294,10 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
 
             for entry in ofx_list:
 
+                # Get filename and log file being scrubbed
                 filename = entry[2]
+                print("")
+                log.info("Scrubbing %s", filename)
 
                 # Check whether to send each file if user selected 'C'.
                 if not (
@@ -310,9 +308,8 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
 
                 if not entry[0]:
                     # Don't run scrubbers if we don't have a site match.
-                    print (
-                        f" {entry[0]} not matched to a site in sites.dat. Scrubber"
-                         " not run."
+                    log.info(
+                        "Not matched to a site in sites.dat. Scrubber not run."
                         )
                     continue
 
@@ -323,8 +320,8 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
                 with open(filename, 'r', encoding='utf-8') as ifile:
                     ofx = ifile.read()
 
-                    # ToDo: Move this check and set flag into scrubbers. Check to see if
-                    # file has been scrubbed already, and if not scrub it.
+                    # Check to see if file has been scrubbed already, and if not scrub
+                    # it.
                     if 'NEWFILEUID:PSIMPORT' not in ofx[:200]:
                         try:
                             scrubber.scrub(filename, userdat.sites[entry[0]])
