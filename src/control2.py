@@ -20,7 +20,7 @@
 #------------------------------------------------------------------------------------
 
 #---MODULES---
-import os
+from pathlib import Path
 
 Debug = False
 #Debug = True           #debug mode = enable only when testing and delete log files after using.
@@ -38,8 +38,9 @@ AboutSource   = 'http://sites.google.com/site/pocketsense'
 AboutName     = 'Robert & Carlos'
 
 #xfrdir = temp directory for statement downloads.  Platform independent
-xfrdir    = os.path.join(os.path.curdir,"xfr") + os.sep
-importdir = os.path.join(os.path.curdir,"import") + os.sep
+importdir = Path.cwd() / "import"
+xfrdir    = Path.cwd() / "xfr"
+
 cfgFile  = 'ofx_config.cfg'    #user account settings (can be encrypted)
 
 DefaultAppID  = 'QWIN'

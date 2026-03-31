@@ -284,18 +284,17 @@ if __name__=="__main__":
 
 
     #check system config for required folders
-    if not os.path.exists(xfrdir):
-        try:
-            os.mkdir(xfrdir)
-        except:
-            log.exception('**Could not create %s' % xfrdir)
-            exit()
-    if not os.path.exists(importdir):
-        try:
-            os.mkdir(importdir)
-        except:
-            log.exception('**Could not create %s' % importdir)
-            exit()
+    try:
+        xfrdir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        log.exception('**Could not create %s', xfrdir)
+        exit()
+
+    try:
+        importdir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        log.exception('**Could not create %s', importdir)
+        exit()
 
     #**********main menu***********
     menu_option = 1

@@ -206,8 +206,8 @@ def QuoteHTMwriter(qList):
     userdat = site_cfg.site_cfg()
 
     # CREATE FILE
-    filename = xfrdir + "quotes.htm"
-    fullpath = '"' + os.path.realpath(filename) + '"'   #encapsulate spaces
+    filename = xfrdir / "quotes.htm"
+    #fullpath = '"' + os.path.realpath(filename) + '"'   #encapsulate spaces
 
     f = open(filename,"w")
     log.info('Writing %s' % filename)
@@ -226,7 +226,7 @@ def QuoteHTMwriter(qList):
 
     f.close()
 
-    return fullpath
+    return filename
 
 def _QHTMheader(f):
     #header for quotes.htm
@@ -508,7 +508,7 @@ def combineOfx(ofxList):
     combOfx = OfxSGMLHeader() + combOfx2
 
     #there should never be two combined*.ofx files here, but we'll use a unique name just in case
-    cfile = xfrdir + 'combined' + str(random.randrange(int(1e5),int(1e6))) + '.ofx'
+    cfile = xfrdir / ('combined' + str(random.randrange(int(1e5),int(1e6))) + '.ofx')
     f=open(cfile,'w')
     f.write(combOfx)
     f.close()

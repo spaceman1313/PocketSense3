@@ -345,7 +345,7 @@ def get_dc_OFX(account, interval):
     sitename = ''.join(a for a in sitename if a not in ' &\/:*?"!=|()')  #first char is a space
 
     ofxFileSuffix = str(random.randrange(int(1e5),int(1e6))) + ".ofx"
-    ofxFileName = xfrdir + sitename + dtnow + ofxFileSuffix
+    ofxFileName = xfrdir.name + os.sep + sitename + dtnow + ofxFileSuffix
 
     msg = "Unknown error occurred while processing OFX request for site: " + sitename
 

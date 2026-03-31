@@ -405,7 +405,7 @@ def getQuotes():
     YahooTimeZone = userdat.YahooTimeZone
     currency = userdat.quotecurrency
     account = userdat.quoteAccount
-    ofxFile1, ofxFile2, htmFileName = '','',''
+    ofxFile1, ofxFile2, htmFileName = '','',None
 
     #use single requests session for all
     global yahooSession, yahooCrumb
@@ -430,17 +430,17 @@ def getQuotes():
 
     if len(qList) > 0:        #write results only if we have some data
         #create quotes ofx file
-        if not os.path.exists(xfrdir):
-            os.mkdir(xfrdir)
+        if not os.path.exists(xfrdir.name):
+            os.mkdir(xfrdir.name)
 
-        ofxFile1 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(int(1e5),int(1e6))) + ".ofx"
+        ofxFile1 = xfrdir.name +os.sep+ "quotes" + dateTimeStr() + str(random.randrange(int(1e5),int(1e6))) + ".ofx"
         writer = OfxWriter(currency, account, 0, stockList, mfList)
         writer.writeFile(ofxFile1)
 
         if userdat.forceQuotes:
            #generate a second file with non-zero shares.  Getdata and Setup use this file
            #to force quote reconciliation in Money, by sending ofxFile2, and then ofxFile1
-           ofxFile2 = xfrdir + "quotes" + dateTimeStr() + str(random.randrange(int(1e5),int(1e6))) + ".ofx"
+           ofxFile2 = xfrdir.name +os.sep+ "quotes" + dateTimeStr() + str(random.randrange(int(1e5),int(1e6))) + ".ofx"
            writer = OfxWriter(currency, account, 0.001, stockList, mfList)
            writer.writeFile(ofxFile2)
 
@@ -452,7 +452,7 @@ def getQuotes():
 
         #append results to QuoteHistory.csv if enabled
         if status and userdat.savequotehistory:
-            csvFile = xfrdir+"QuoteHistory.csv"
+            csvFile = xfrdir.name+os.sep+"QuoteHistory.csv"
             log.info('Appending quote results to {0}'.format(csvFile))
             newfile = (glob.glob(csvFile) == [])
             f = open(csvFile,"a")

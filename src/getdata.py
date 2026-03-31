@@ -49,10 +49,10 @@ if sys.version_info < (REQUIRED_MAJOR, REQUIRED_MINOR):
 
 # Now import modules as we normally would
 # pylint: disable=wrong-import-position, wildcard-import, unused-wildcard-import
-import os
-import glob
 import time
 import re
+import webbrowser
+from pathlib import Path
 
 import ofx_online
 import quotes
@@ -150,7 +150,6 @@ def get_directconnect_ofx_files(acct_array: list) -> tuple[bool, list]:
 
     Args:
         acct_array (list): List of account information.
-        dl_interval (int): Download interval in days.
 
     Returns:
         A 2-element tuple containing:
@@ -225,19 +224,18 @@ def get_import_ofx_files() -> tuple[bool, list]:
 
     # Process all files in import folder [manual user downloaded files].
     # Include anything that looks like a valid ofx file regardless of extension.
-    for f in glob.glob(importdir+'*.*'):
 
-        # Get the parts of the filename
-        fname = os.path.basename(f)             # full base filename.extension
-        bext = os.path.splitext(fname)[1]       # file extension
+    for f in importdir.glob("*.*"):
+
+        # Come up with a friendly display name for logging ("parent/filename.ext")
+        in_displayname = str(Path(f.parent.name)/f.name)
 
         # Read the file
-        with open(f) as ifile:
+        with open(f, encoding='utf-8') as ifile:
             dat = ifile.read()
 
         # Only process if it looks like an ofx file
         if validOFX(dat) == '':
-            log.info("Importing %s", fname)
 
             # Try to match file to an entry in sites.dat
             site = get_site(dat)
@@ -245,11 +243,22 @@ def get_import_ofx_files() -> tuple[bool, list]:
             # Get the account ID
             account_id = get_acctid(dat)
 
-            # Preserve original file type but save w/ ofx extension and move to xfrdir
-            outname = xfrdir+fname + ('' if bext == '.ofx' else '.ofx')
-            os.rename(f, outname)
-            ofx_list.append([site, account_id, outname, "ImportFile"])
-            log.info('%s saved to %s', fname, outname)
+            # Preserve original file type but save w/ ofx extension
+            outname =  f.name + ('' if f.suffix == ".ofx" else ".ofx")
+
+            # Move file to xfdir
+            outpath = xfrdir / outname
+            f.rename(outpath)
+
+            # Add to list of OFX files to processs
+            ofx_list.append([site, account_id, str(outpath), "ImportFile"])
+
+            # Log move
+            out_displayname = str(Path(outpath.parent.name)/outpath.name)
+            log.info("%s saved to %s", in_displayname, out_displayname)
+        else:
+            log.info("%s does not appear to be a valid OFX file. Skipping.",
+                      in_displayname)
 
     return result, ofx_list
 
@@ -336,11 +345,12 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
                 pattern = re.compile(r'NEWFILEUID:.*')
                 ofx2 = pattern.sub('NEWFILEUID:PSIMPORT', ofx)
                 if ofx2:
-                    with open(filename, 'w') as ofile:
+                    with open(filename, 'w', encoding='utf-8') as ofile:
                         ofile.write(ofx2)
 
 
-def send_files_to_money(ofx_list: list, quote_file_forced: str, interactive_flag: bool):
+def send_files_to_money(ofx_list: list, quote_file_forced: str,
+                        interactive_flag: bool) -> None:
     """
     Sends all OFX files to Microsoft Money.
 
@@ -377,7 +387,7 @@ def send_files_to_money(ofx_list: list, quote_file_forced: str, interactive_flag
             log.debug('User confirmed upload to Money.')
 
             # Send ForceQuotes file to Money if defined (NEEDS CLEANUP)
-            if glob.glob(quote_file_forced):
+            if Path(quote_file_forced).exists():
                 if Debug:
                     log.debug("Importing ForceQuotes statement: %s", quote_file_forced)
                 run_file(quote_file_forced)  # Force transactions for MoneyUK
@@ -485,10 +495,9 @@ def main():
         pwkey = decrypt_pw(pwkey)
         acct_array = acctDecrypt(acct_array, pwkey)
 
-    # delete old data files
-    ofxfiles = xfrdir+'*.ofx'
-    if glob.glob(ofxfiles):
-        os.system("del "+ofxfiles)
+    # Delete old data files
+    for old_file in xfrdir.glob("*.ofx"):
+        old_file.unlink(missing_ok=True)
 
     # Determine if running in interactive mode.  If so, prompt user at each step.  If
     # not, use settings defined in sites.dat
@@ -578,16 +587,14 @@ def main():
         status = False
 
     # Display quotes.htm if downloaded and user wants to see it.
-    htm_filename_root = os.path.basename(html_quote_file) if html_quote_file else ""
-
     if html_quote_file and (input_default(
-        f"\nOpen <{htm_filename_root}> in the default browser? (y/n)", 'n', bool)
+        f"\nOpen <{html_quote_file.name}> in the default browser? (y/n)", 'n', bool)
         if (interactive_flag or userdat.askquotehtm) else userdat.showquotehtm
     ):
 
         log.debug("Full quotes file name: %s", html_quote_file)
-        log.info("Opening %s in browser.", htm_filename_root)
-        os.startfile(html_quote_file)  # don't wait for browser close
+        log.info("Opening %s in browser.", html_quote_file.name)
+        webbrowser.open(html_quote_file.as_uri())  # don't wait for browser close
 
     # Keep window open if needed, complete execution
     if not status:
