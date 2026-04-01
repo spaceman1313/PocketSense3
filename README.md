@@ -69,7 +69,7 @@ the very last step in the process, thus overriding the `sites.dat` setting
 scripts.  When you feel comfortable with this new version, set that setting to False to
 allow *PocketSense3* to work as intended.
 
-> [IMPORTANT]
+> [!IMPORTANT]
 > Be aware that *PocketSense* (both 2 and 3) use DES encryption.  Probably good enough
 > for storing passwords on your own computer, but generally the DES algorithm is no
 > longer considered the best for encrypting sensitive data.
