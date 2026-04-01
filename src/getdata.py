@@ -11,13 +11,14 @@ Main Features:
 - Download OFX statements for Direct Connect accounts
 - Import and process OFX files from a designated import directory
 - Retrieve and process stock/fund quotes
+- Scrub OFX files to ensure compatibility with Microsoft Money
 - Combine OFX files if configured
 - Send processed files to Microsoft Money
 - Interactive and non-interactive operation modes
 - Logging of all major actions and errors
 - Python version compatibility check
 
-Intended to be called directly from the command line or a batch file
+Intended to be called directly from the command line or a batch file.
 
 Pocketsense scripts originally by Robert:
 http://sites.google.com/site/pocketsense/
@@ -69,7 +70,7 @@ log = create_logger('root', 'getdata.log')
 if Debug:
     logging.basicConfig(level=logging.DEBUG)
     log.warning("**DEBUG Enabled: See Control2.py to disable.")
-    log.debug('xfrdir = %s', xfrdir)
+    log.debug('xfrdir = %s', xfrdir.name)
 
 
 def get_site(ofx: str) -> str:
@@ -78,7 +79,7 @@ def get_site(ofx: str) -> str:
 
     Returns the appropriate site configuration entry for an OFX file based on the FID
     and BANKID values found in the OFX file.  If a matching site is not found, returns
-    the first site entry in sites.dat as a default.
+    an empty string.
 
     Args:
         ofx (str): OFX file content as a string.
@@ -151,7 +152,8 @@ def get_directconnect_ofx_files(acct_array: list) -> tuple[bool, list]:
     Returns:
         A 2-element tuple containing:
             - bool: Overall status of the download operations.
-            - list: List of downloaded OFX files.
+            - list: List of downloaded OFX files, where each item is a list:
+                [sitename, account#, filename, "DirectConnect"].
     """
     # Get download interval, if promptInterval=Yes in sites.dat
     # should move into get ofx function
