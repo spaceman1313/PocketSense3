@@ -19,7 +19,7 @@ Main Features:
 
 Intended to be called directly from the command line or a batch file
 
-Pocketsene scripts originally by Robert:
+Pocketsense scripts originally by Robert:
 http://sites.google.com/site/pocketsense/
 
 This is an updated version ported to Python3 and modified to better comply with Python
@@ -88,7 +88,6 @@ def get_site(ofx: str) -> str:
     """
 
     # Get <FID> and <BANKID> values from OFX file, if they exist
-    site = {}
     p = re.compile(r'<FID>(.*?)[<\s]', re.IGNORECASE | re.DOTALL)
     r = p.search(ofx)
     fid = r.groups()[0] if r else 'undefined'
@@ -102,9 +101,7 @@ def get_site(ofx: str) -> str:
     sites = userdat.sites
     if fid or bankid:
         for key, value in sites.items():
-            #if not site:
-            #    site = value   # defaults to first site found
-
+            # Check for match on FID or BANKID
             if FieldVal(value, 'fid') == fid or FieldVal(value, 'bankid') == bankid:
                 site = key
                 log.info('Matched import file to site *%s*', key)
@@ -246,17 +243,18 @@ def get_import_ofx_files() -> tuple[bool, list]:
             # Preserve original file type but save w/ ofx extension
             outname =  f.name + ('' if f.suffix == ".ofx" else ".ofx")
 
-            # Move file to xfdir
+            # Move file to xfrdir
             outpath = xfrdir / outname
             f.rename(outpath)
 
-            # Add to list of OFX files to processs
+            # Add to list of OFX files to process
             ofx_list.append([site, account_id, str(outpath), "ImportFile"])
 
             # Log move
             out_displayname = str(Path(outpath.parent.name)/outpath.name)
             log.info("%s saved to %s", in_displayname, out_displayname)
         else:
+            result = False
             log.info("%s does not appear to be a valid OFX file. Skipping.",
                       in_displayname)
 
@@ -265,9 +263,9 @@ def get_import_ofx_files() -> tuple[bool, list]:
 
 def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
     """
-    Scrubs all OFX filex that have been collected.
+    Scrubs all OFX files that have been collected.
 
-    Runs the scrubber routine on each OFX file that has beren collected.  Option is
+    Runs the scrubber routine on each OFX file that has been collected.  Option is
     given for the user to scrub one at a time, provided the interactive flag is set.
 
     Args:
@@ -286,7 +284,7 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
     else:
         userin = defval
 
-    # Proceed acccording to user selection.
+    # Proceed according to user selection.
     match userin:
         case 'N':
             # Don't send to Scrub.
@@ -406,7 +404,7 @@ def send_files_to_money(ofx_list: list, quote_file_forced: str,
                 run_file(cfile)
 
             else:
-                # Send individual fils, prompting for verification if user selected 'V'
+                # Send individual files, prompting for verification if user selected 'V'
                 for ofxfile in ofx_list:
                     # Upload each file one at a time, verify if requested
                     if (input_default(
@@ -431,12 +429,12 @@ def input_default(prompt: str, default: object, type_cast: type = str) -> object
 
     When type_cast is set to bool, accepts Y/N, Yes/No, True/False, T/F, 1/0
     (case-insensitive) as valid inputs.  In this case the default should be set to a
-    user friendly value (e.g. 'Y' or 'N') rather than a boolean value.
+    user friendly value (e.g. 'Y' or 'N') rather than a Boolean value.
 
     Args:
-        prompt (str): The prompt message to display to the user. default (any): The
-        default value to use if the user provides no input. type_cast (type, optional):
-        A function to cast the input to a specific type.
+        prompt (str): The prompt message to display to the user.
+        default (any): The default value to use if the user provides no input.
+        type_cast (type, optional): A function to cast the input to a specific type.
             Defaults to str.
 
     Returns:
@@ -444,14 +442,14 @@ def input_default(prompt: str, default: object, type_cast: type = str) -> object
         if no input is provided.
     """
 
-    # Loop until valid(ish) input is received
+    # Loop until valid input is received
     user_input = ""
     while not user_input:
         try:
             # Get the user input
             user_input = input(f"{prompt} [{default}]: ")
 
-            # Process the special case of boolean input
+            # Process the special case of Boolean input
             if type_cast == bool:
                 user_input = str(default) if not user_input else user_input
                 if user_input.upper() in ['Y', 'YES', 'TRUE', 'T', '1']:
@@ -459,7 +457,7 @@ def input_default(prompt: str, default: object, type_cast: type = str) -> object
                 elif user_input.upper() in ['N', 'NO', 'FALSE', 'F', '0']:
                     user_input = False
                 else:
-                    raise ValueError("Invalid boolean input")
+                    raise ValueError("Invalid Boolean input")
                 break
 
             # Process all other types
@@ -515,7 +513,7 @@ def main():
 
     # Initialize variables to track status and results across operations
     status = True   # Overall status across all operations
-                    # True if all operations are succesful
+                    # True if all operations are successful
     ofx_list = []   # List of all OFX files to send to Money.
                     # Each item is a list: [SiteName, Account#, OFX filename]
     quote_file, quote_file_forced, html_quote_file = "", "", ""
