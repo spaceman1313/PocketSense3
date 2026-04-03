@@ -1,5 +1,9 @@
+# Copyright (c) 2026 spaceman1313. All rights reserved.
+# Use of this source code is governed by the MIT License that can be found in the
+# LICENSE file.
+
 """
-Getdata.py - Retrieve statements, stock, and fund data for PocketSense3
+getdata.py - Retrieve statements, stock, and fund data for PocketSense3
 This module provides functions to download, import, and process OFX files for financial
 accounts, as well as retrieve stock and fund quotes. It supports both interactive and
 automated modes, handles account decryption, manages file imports, and sends processed
@@ -59,6 +63,7 @@ import ofx_online
 import quotes
 import site_cfg
 import scrubber
+from getdata_orchestrator import GetDataOrchestrator
 
 from control2 import *
 from rlib1 import *
@@ -263,7 +268,7 @@ def get_import_ofx_files() -> tuple[bool, list]:
     return result, ofx_list
 
 
-def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
+def scrub_files(ofx_list: list, orchestrator: GetDataOrchestrator) -> None:
     """
     Scrubs all OFX files that have been collected.
 
@@ -272,85 +277,76 @@ def scrub_files(ofx_list: list, interactive_flag: bool) -> None:
 
     Args:
         ofx_list (list): List containing all OFX files to send to Money.
-        interactive_flag (bool): Flag indicating whether to prompt the user for
-            interactive input.
+        orchestrator (GetDataOrchestrator): The orchestrator instance for handling user
+        interactions.
     """
 
     # Determine if user wants to scrub all files, and if so, whether they want
     # to confirm each file before scrubbing.
-    defval = 'Y' if userdat.scrubOfx else 'N'
-    if interactive_flag:
-        userin = str(
-            input_default("\nScrub OFX files? (y/n/c=confirm)", defval.lower(), str)
-        )[:1].upper()
-    else:
-        userin = defval
+    if orchestrator.should_scrub_files():
 
-    # Proceed according to user selection.
-    match userin:
-        case 'N':
-            # Don't send to Scrub.
-            log.info("OFX files not scrubbed (user selection or sites.dat setting).")
+        # If doing individual scrubs, warn user about potential for errors if they
+        # choose not to scrub.
+        if orchestrator.confirm_individual_scrub:
             log.info("Warning not scrubbing files may result in errors when "
-                     "importing into MS Money.")
+                        "importing into MS Money.")
 
-        case 'Y' | 'C':
-            # Let's scrub them.
+        # Let's scrub them.
+        for entry in ofx_list:
 
-            if userin == 'C':
-                log.info("Warning not scrubbing files may result in errors when "
-                         "importing into MS Money.")
+            # Get filename and log file being scrubbed
+            filename = entry[2]
+            # Don't run scrubbers on quote files, they break them.
+            if entry[0] == "Stock/Fund Quotes":
+                continue
 
-            for entry in ofx_list:
+            # Check whether to send each file if user selected 'C'.
+            if not orchestrator.should_scrub_this_file(filename):
+                continue
 
-                # Get filename and log file being scrubbed
-                filename = entry[2]
-                print("")
-                log.info("Scrubbing %s", filename)
+            # Don't run scrubbers if we don't have a site match.
+            if not entry[0]:
+                log.info(
+                    "Not matched to a site in sites.dat. Scrubber not run on %s.",
+                    filename
+                )
+                continue
 
-                # Check whether to send each file if user selected 'C'.
-                if not (
-                    input_default(f"Scrub file {filename}? (y/n)", 'y', bool)
-                    if userin == 'C' else True
-                ):
-                    break
+            # Proceed with Scrubbing
+            print("")
+            log.info("Scrubbing %s", filename)
 
-                if not entry[0]:
-                    # Don't run scrubbers if we don't have a site match.
-                    log.info(
-                        "Not matched to a site in sites.dat. Scrubber not run."
-                        )
-                    continue
+            with open(filename, 'r', encoding='utf-8') as ifile:
+                ofx = ifile.read()
 
-                if entry[0] == "Stock/Fund Quotes":
-                    # Don't run scrubbers on quote files, they break them.
-                    continue
+                # Check to see if file has been scrubbed already, and if not scrub
+                # it.
+                if 'NEWFILEUID:PSIMPORT' not in ofx[:200]:
+                    try:
+                        scrubber.scrub(filename, userdat.sites[entry[0]])
+                    except re.error:
+                        log.info("Error running scrubbers on %s",  filename)
 
-                with open(filename, 'r', encoding='utf-8') as ifile:
-                    ofx = ifile.read()
+            # Set NEWFILEUID:PSIMPORT to flag the file as having already been
+            # imported. Don't want to accidentally scrub twice
+            with open(filename, 'r', encoding='utf-8') as ifile:
+                ofx = ifile.read()
 
-                    # Check to see if file has been scrubbed already, and if not scrub
-                    # it.
-                    if 'NEWFILEUID:PSIMPORT' not in ofx[:200]:
-                        try:
-                            scrubber.scrub(filename, userdat.sites[entry[0]])
-                        except re.error:
-                            log.info("Error running scrubbers on %s",  filename)
+            pattern = re.compile(r'NEWFILEUID:.*')
+            ofx2 = pattern.sub('NEWFILEUID:PSIMPORT', ofx)
+            if ofx2:
+                with open(filename, 'w', encoding='utf-8') as ofile:
+                    ofile.write(ofx2)
 
-                # Set NEWFILEUID:PSIMPORT to flag the file as having already been
-                # imported. Don't want to accidentally scrub twice
-                with open(filename, 'r', encoding='utf-8') as ifile:
-                    ofx = ifile.read()
-
-                pattern = re.compile(r'NEWFILEUID:.*')
-                ofx2 = pattern.sub('NEWFILEUID:PSIMPORT', ofx)
-                if ofx2:
-                    with open(filename, 'w', encoding='utf-8') as ofile:
-                        ofile.write(ofx2)
+    else:
+        # Don't send to Scrub.
+        log.info("OFX files not scrubbed (user selection or sites.dat setting).")
+        log.info("Warning not scrubbing files may result in errors when "
+                    "importing into MS Money.")
 
 
 def send_files_to_money(ofx_list: list, quote_file_forced: str,
-                        interactive_flag: bool) -> None:
+                        orchestrator: GetDataOrchestrator) -> None:
     """
     Sends all OFX files to Microsoft Money.
 
@@ -361,8 +357,8 @@ def send_files_to_money(ofx_list: list, quote_file_forced: str,
     Args:
         ofx_list (list): List containing all OFX files to send to Money.
         quote_file_forced (str): Downloaded ForceQuotes OFX file.
-        interactive_flag (bool): Flag indicating whether to prompt the user for
-            interactive input.
+        orchestrator (GetDataOrchestrator): The orchestrator instance for handling user
+        interactions.
     """
 
     # Combine OFX files if option set
@@ -370,108 +366,44 @@ def send_files_to_money(ofx_list: list, quote_file_forced: str,
 
     # Determine if user wants to send results to Money, and if so, whether they want
     # to verify each file before sending.
-    if interactive_flag:
-        userin = str(input_default(
-            "\nSend Results to Money? (y/n/v=Verify)", 'y', str))[:1].upper()
+    if orchestrator.should_send_to_money():
+
+        # Send to Money
+        log.debug('User confirmed upload to Money.')
+
+        # Send ForceQuotes file to Money if defined (NEEDS CLEANUP)
+        if quote_file_forced and Path(quote_file_forced).exists():
+            if Debug:
+                log.debug("Importing ForceQuotes statement: %s", quote_file_forced)
+            run_file(quote_file_forced)  # Force transactions for MoneyUK
+            input(
+                "ForceQuote statement loaded.  Accept in Money and press <Enter> "
+                "to continue."
+            )
+
+        # Send individual file(s) or combined file to Money
+        print("")
+        log.info("Sending statement(s) to Money...")
+
+        if cfile and not orchestrator.confirm_individual_sendto:
+            # Send combined file
+            log.info("Importing combined OFX file: %s", cfile)
+            run_file(cfile)
+
+        else:
+            # Send individual files, prompting for verification if user selected 'V'
+            for ofxfile in ofx_list:
+                # Upload each file one at a time, verify if requested
+                if orchestrator.should_send_this_file(ofxfile[2]):
+                    log.info("Importing %s", ofxfile[2])
+                    run_file(ofxfile[2])
+
+                # Slight delay, to force load order in Money
+                time.sleep(0.5)
+
     else:
-        userin = 'Y' if userdat.sendToMoney else 'N'
-
-    # Process user selection
-    match userin:
-        case 'N':
-            # Don't send to Money
-            log.info("Results not sent to Money (user selection or sites.dat setting).")
-
-        case 'Y' | 'V':
-            # Send to Money
-            log.debug('User confirmed upload to Money.')
-
-            # Send ForceQuotes file to Money if defined (NEEDS CLEANUP)
-            if Path(quote_file_forced).exists():
-                if Debug:
-                    log.debug("Importing ForceQuotes statement: %s", quote_file_forced)
-                run_file(quote_file_forced)  # Force transactions for MoneyUK
-                input(
-                    "ForceQuote statement loaded.  Accept in Money and press <Enter> "
-                    "to continue."
-                )
-
-            # Send individual file(s) or combined file to Money
-            print("")
-            log.info("Sending statement(s) to Money...")
-
-            if cfile and userin != 'V':
-                # Send combined file
-                log.info("Importing combined OFX file: %s", cfile)
-                run_file(cfile)
-
-            else:
-                # Send individual files, prompting for verification if user selected 'V'
-                for ofxfile in ofx_list:
-                    # Upload each file one at a time, verify if requested
-                    if (input_default(
-                        f"Upload {ofxfile[0]} : {ofxfile[1]}? (y/n)", 'y', bool)
-                        if userin == 'V' else True
-                    ):
-
-                        log.info("Importing %s", ofxfile[2])
-                        run_file(ofxfile[2])
-
-                    # Slight delay, to force load order in Money
-                    time.sleep(0.5)
-
-        case _:
-            # Invalid selection
-            log.info('Invalid selection.  Results not sent to Money.')
-
-
-def input_default(prompt: str, default: object, type_cast: type = str) -> object:
-    """
-    Prompts the user for input with a default value.
-
-    When type_cast is set to bool, accepts Y/N, Yes/No, True/False, T/F, 1/0
-    (case-insensitive) as valid inputs.  In this case the default should be set to a
-    user friendly value (e.g. 'Y' or 'N') rather than a Boolean value.
-
-    Args:
-        prompt (str): The prompt message to display to the user.
-        default (any): The default value to use if the user provides no input.
-        type_cast (type, optional): A function to cast the input to a specific type.
-            Defaults to str.
-
-    Returns:
-        The value entered by the user, cast to the specified type, or the default value
-        if no input is provided.
-    """
-
-    # Loop until valid input is received
-    user_input = ""
-    while not user_input:
-        try:
-            # Get the user input
-            user_input = input(f"{prompt} [{default}]: ")
-
-            # Process the special case of Boolean input
-            if type_cast == bool:
-                user_input = str(default) if not user_input else user_input
-                if user_input.upper() in ['Y', 'YES', 'TRUE', 'T', '1']:
-                    user_input = True
-                elif user_input.upper() in ['N', 'NO', 'FALSE', 'F', '0']:
-                    user_input = False
-                else:
-                    raise ValueError("Invalid Boolean input")
-                break
-
-            # Process all other types
-            else:
-                user_input = default if not type_cast(user_input) else user_input
-
-        except ValueError:
-            # Only error we expect is a ValueError from an invalid type cast, so we can
-            # catch that and prompt again
-            print(f"Invalid entry. Please enter a value of type {type_cast.__name__}.")
-
-    return user_input
+        # Don't send to Money
+        log.info("Results not sent to Money (user selection or sites.dat setting).")
 
 
 def main():
@@ -501,10 +433,8 @@ def main():
 
     # Determine if running in interactive mode.  If so, prompt user at each step.  If
     # not, use settings defined in sites.dat
-    interactive_flag = bool(
-        input_default("Run in interactive mode? (y/n)", 'n', bool)
-        if userdat.promptStart else False
-    )
+    orchestrator = GetDataOrchestrator(userdat)
+    orchestrator.set_interactive()
 
     # Create process Queue in the right order
     work_queue = ['Accts', 'importFiles']
@@ -524,45 +454,30 @@ def main():
     for q_entry in work_queue:
 
         # Get OFX files for Direct Connect accounts
-        if q_entry == 'Accts':
-            if (input_default(
-                "\nDownload statements for all online accounts? (y/n)", 'n', bool)
-                if interactive_flag else userdat.fetchRemote
-            ):
-
-                log.info("\n--- Downloading statements for all accounts ---")
-                accts_status, new_list = get_directconnect_ofx_files(acct_array)
-                ofx_list.extend(new_list)
-                status = status and accts_status
+        if q_entry == 'Accts' and orchestrator.should_fetch_remote_accounts():
+            log.info("\n--- Downloading statements for all accounts ---")
+            accts_status, new_list = get_directconnect_ofx_files(acct_array)
+            ofx_list.extend(new_list)
+            status = status and accts_status
 
         # Get OFX files from import folder
-        if q_entry == 'importFiles':
-            if (input_default(
-                "\nProcess files in import folder? (y/n)", 'n', bool)
-                if interactive_flag else userdat.fetchImport
-            ):
-
-                print("")
-                log.info("--- Processing OFX files in import folder ---")
-                import_status, new_list = get_import_ofx_files()
-                ofx_list.extend(new_list)
-                status = status and import_status
+        if q_entry == 'importFiles' and orchestrator.should_fetch_import_files():
+            print("")
+            log.info("--- Processing OFX files in import folder ---")
+            import_status, new_list = get_import_ofx_files()
+            ofx_list.extend(new_list)
+            status = status and import_status
 
         # Get stock/fund quotes
-        if q_entry == 'Quotes':
-            if (input_default(
-                "\nDownload stock/fund quotes? (y/n)", 'n', bool)
-                if interactive_flag else userdat.fetchQuotes
-            ):
-
-                print("")
-                log.info("--- Downloading stock/fund quotes ---")
-                quote_status, quote_file, quote_file_forced, html_quote_file = (
-                    quotes.getQuotes())
-                if quote_status:
-                    new_list = ['Stock/Fund Quotes', '', quote_file, "Quote"]
-                    ofx_list.append(new_list)
-                status = status and quote_status
+        if q_entry == 'Quotes' and orchestrator.should_fetch_quotes():
+            print("")
+            log.info("--- Downloading stock/fund quotes ---")
+            quote_status, quote_file, quote_file_forced, html_quote_file = (
+                quotes.getQuotes())
+            if quote_status:
+                new_list = ['Stock/Fund Quotes', '', quote_file, "Quote"]
+                ofx_list.append(new_list)
+            status = status and quote_status
 
     # Scrub all OFX files and send to Money.
     if len(ofx_list) > 0:
@@ -570,12 +485,12 @@ def main():
         # Scrub ofx files, the interactive prompts get dealt inside the function.
         print("")
         log.info('--- Scrubbing files ---')
-        scrub_files(ofx_list, interactive_flag)
+        scrub_files(ofx_list, orchestrator)
 
         # Send to money, the interactive prompts get dealt with inside the function.
         print("")
         log.info('--- Sending files to MS Money ---')
-        send_files_to_money(ofx_list, quote_file_forced, interactive_flag)
+        send_files_to_money(ofx_list, quote_file_forced, orchestrator)
 
     else:
         log_message = (
@@ -587,11 +502,7 @@ def main():
         status = False
 
     # Display quotes.htm if downloaded and user wants to see it.
-    if html_quote_file and (input_default(
-        f"\nOpen <{html_quote_file.name}> in the default browser? (y/n)", 'n', bool)
-        if (interactive_flag or userdat.askquotehtm) else userdat.showquotehtm
-    ):
-
+    if html_quote_file and orchestrator.should_open_quotes_html(html_quote_file.name):
         log.debug("Full quotes file name: %s", html_quote_file)
         log.info("Opening %s in browser.", html_quote_file.name)
         webbrowser.open(html_quote_file.as_uri())  # don't wait for browser close
@@ -603,7 +514,7 @@ def main():
             "Review display and log to identify the problem.")
         log.warning(log_message)
 
-    if Debug or interactive_flag or userdat.promptEnd or not status:
+    if Debug or orchestrator.interactive or userdat.promptEnd or not status:
         input("\nPress <Enter> to close the window...")
 
     print("")
