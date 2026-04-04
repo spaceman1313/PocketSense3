@@ -59,6 +59,7 @@ import re
 import webbrowser
 from pathlib import Path
 
+from ofx import OFX
 import ofx_online
 import quotes
 import site_cfg
@@ -78,7 +79,7 @@ if Debug:
     log.debug('xfrdir = %s', xfrdir.name)
 
 
-def get_site(ofx: str) -> str:
+def get_site(ofx: OFX) -> str:
     """
     Returns the site configuration entry for an OFX file.
 
@@ -94,12 +95,8 @@ def get_site(ofx: str) -> str:
     """
 
     # Get <FID> and <BANKID> values from OFX file, if they exist
-    p = re.compile(r'<FID>(.*?)[<\s]', re.IGNORECASE | re.DOTALL)
-    r = p.search(ofx)
-    fid = r.groups()[0] if r else 'undefined'
-    p = re.compile(r'<BANKID>(.*?)[<\s]', re.IGNORECASE | re.DOTALL)
-    r = p.search(ofx)
-    bankid = r.groups()[0] if r else 'undefined'
+    fid = ofx.get_tag_value("FID")
+    bankid = ofx.get_tag_value("BANKID")
 
     # Try to find a matching site entry based on FID or BANKID.  If a match isn't found,
     # site will be set to the first entry in sites.dat
@@ -114,33 +111,6 @@ def get_site(ofx: str) -> str:
                 break
 
     return site
-
-
-def get_acctid(ofx: str) -> str:
-    """
-    Returns the <ACCTID> field of an OFX file.
-
-    Returns the <ACCTID> field of an OFX file.  If the field is not found, returns an
-    empty string.
-
-    Args:
-        ofx (str): OFX file content as a string.
-
-    Returns:
-        A str containing the account ID found in the <ACCTID> field of the OFX file, or
-        an empty string if the field is not found.
-    """
-
-    result = re.search(r"<ACCTID>([0-9]+)", ofx)
-
-    if result is None:
-        # No match return blank account
-        acctid = ""
-    else:
-        # Return match
-        acctid = result.group(1)
-
-    return acctid
 
 
 def get_directconnect_ofx_files(acct_array: list) -> tuple[bool, list]:
@@ -235,17 +205,16 @@ def get_import_ofx_files() -> tuple[bool, list]:
         in_displayname = str(Path(f.parent.name)/f.name)
 
         # Read the file
-        with open(f, encoding='utf-8') as ifile:
-            dat = ifile.read()
+        ofxdat = OFX.load_from_file(f)
 
         # Only process if it looks like an ofx file
-        if validOFX(dat) == '':
+        if validOFX(ofxdat.content) == '':
 
             # Try to match file to an entry in sites.dat
-            site = get_site(dat)
+            site = get_site(ofxdat)
 
             # Get the account ID
-            account_id = get_acctid(dat)
+            account_id = ofxdat.get_tag_value("ACCTID") or ""
 
             # Preserve original file type but save w/ ofx extension
             outname =  f.name + ('' if f.suffix == ".ofx" else ".ofx")
