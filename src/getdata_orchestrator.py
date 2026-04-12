@@ -53,8 +53,9 @@ class GetDataOrchestrator:
         """
 
         # Loop until valid input is received
-        user_input = ""
-        while not user_input:
+        valid_input = False
+        user_input = None
+        while not valid_input:
             try:
                 # Get the user input
                 user_input = input(f"{prompt} [{default}]: ")
@@ -75,6 +76,8 @@ class GetDataOrchestrator:
                         user_input = type_cast(user_input)
                     else:
                         user_input = default
+
+                valid_input = True  # Exit the loop if input is valid
 
             except ValueError:
                 # Only error we expect is a ValueError from an invalid type cast, so we
