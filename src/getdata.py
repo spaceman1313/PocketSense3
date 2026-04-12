@@ -387,6 +387,19 @@ def main():
     print('')
     log.info("%s, Ver: %s", AboutTitle, AboutVersion)
 
+    #check system config for required folders
+    try:
+        xfrdir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        log.exception('**Could not create %s', xfrdir)
+        sys.exit()
+
+    try:
+        importdir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        log.exception('**Could not create %s', importdir)
+        sys.exit()
+
     # Get account info
     # acct_array = [['SiteName', 'Account#', 'AcctType', 'UserName', 'PassWord'], ...]
     pwkey, _, acct_array = get_cfg()
