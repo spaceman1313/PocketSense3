@@ -434,7 +434,7 @@ def run_file(filename):
 
     if not BlockSendToMoney:
         #encapsulate call to os.system in quotes
-        os.system('"'+filename+'"')
+        os.system(f'"{str(filename)}"')
     else:
         log = logging.getLogger('root')
         log.info('SendtoMoney is disabled.  Not sending %s to Money.', filename)
