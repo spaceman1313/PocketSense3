@@ -13,3 +13,4 @@ src/*.pyc
 .vscode/settings.json
 TempFolder/
 src/test.ipynb
+src/scrubbers/Scrub_CL7.py
