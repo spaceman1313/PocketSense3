@@ -433,8 +433,7 @@ def float2(str):
 def run_file(filename):
 
     if not BlockSendToMoney:
-        #encapsulate call to os.system in quotes
-        os.system(f'"{str(filename)}"')
+        os.startfile(str(filename))
     else:
         log = logging.getLogger('root')
         log.info('SendtoMoney is disabled.  Not sending %s to Money.', filename)
