@@ -437,8 +437,8 @@ if __name__=="__main__":
 
     #write the data
     f = open(cfgFile, 'wb')
-    pickle.dump(pwkey_e, f)      #encrypted key (pw)
-    pickle.dump(c_getquotes, f)  #get stock quotes?
-    pickle.dump(AcctArray, f)    #account info
+    pickle.dump(pwkey_e, f, protocol=0)      #encrypted key (pw)
+    pickle.dump(c_getquotes, f, protocol=0)  #get stock quotes?
+    pickle.dump(AcctArray, f, protocol=0)    #account info
     f.close()
     log.info('-----------------------------------------------------------------------------------')
